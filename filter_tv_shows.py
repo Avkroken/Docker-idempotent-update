@@ -19,7 +19,7 @@ import json
 import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 
 
 # ===== CONFIGURATION =====
@@ -51,7 +51,7 @@ HEADERS = {
 
 # ===== FUNCTIONS =====
 
-def get_tv_show_ids(pages=15):
+def get_tv_show_ids(pages=10):
     """Fetch TV show IDs from TMDb. Only this year onwards."""
     tv_ids = set()
     current_year = datetime.now().year
@@ -99,22 +99,6 @@ def get_tv_show_ids(pages=15):
                 time.sleep(1)
 
     return list(tv_ids)
-
-
-def get_tvdb_id(tmdb_id):
-    """Fetch TVDB ID from TMDb external IDs endpoint."""
-    url = f"{BASE_URL}/tv/{tmdb_id}/external_ids"
-    try:
-        response = requests.get(url, headers=HEADERS, timeout=30)
-        if response.status_code == 429:
-            time.sleep(5)
-            response = requests.get(url, headers=HEADERS, timeout=30)
-        if response.status_code == 200:
-            tvdb_id = response.json().get("tvdb_id")
-            return tvdb_id if tvdb_id else None
-    except Exception:
-        pass
-    return None
 
 
 def is_prestige_show(show):
@@ -169,8 +153,6 @@ def fetch_and_filter_shows(tv_ids):
             networks_str = ", ".join([n["name"] for n in show.get("networks", [])])
             print(f"  🎬 {show.get('name')} ({first_air}) - {networks_str} - TVDB: {tvdb_id}")
 
-        except requests.exceptions.RequestException:
-            pass
         except Exception:
             pass
 
