@@ -18,7 +18,7 @@ import json
 import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 
 
 # ===== CONFIGURATION =====
@@ -40,7 +40,7 @@ HEADERS = {
 
 # ===== FUNCTIONS =====
 
-def get_movie_ids(pages=15):
+def get_movie_ids(pages=10):
     """Fetch movie IDs from TMDb. Only this year up to today."""
     movie_ids = set()
     current_year = datetime.now().year
@@ -59,6 +59,9 @@ def get_movie_ids(pages=15):
             url = f"{BASE_URL}{endpoint}{'&' if '?' in endpoint else '?'}page={page}"
             try:
                 response = requests.get(url, headers=HEADERS, timeout=30)
+                if response.status_code == 429:
+                    time.sleep(2)
+                    response = requests.get(url, headers=HEADERS, timeout=30)
                 if response.status_code == 200:
                     for movie in response.json().get("results", []):
                         if endpoint in endpoints:
@@ -66,8 +69,6 @@ def get_movie_ids(pages=15):
                             if not rd or rd < start_date_str or rd > today_str:
                                 continue
                         movie_ids.add(movie["id"])
-                elif response.status_code == 429:
-                    time.sleep(2)
             except Exception:
                 time.sleep(1)
 
@@ -111,6 +112,7 @@ def fetch_and_filter_movies(movie_ids):
                 continue
 
             budget = movie.get("budget", 0)
+            # TMDb returns 0 for unknown/unreported budgets; skip to avoid false positives
             if budget == 0:
                 continue
 
