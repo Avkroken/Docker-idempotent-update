@@ -1,5 +1,8 @@
 # 🎬 Filtered Movies & TV Shows
 
+[![CI](https://github.com/blixten85/filtered-movies/actions/workflows/ci.yml/badge.svg)](https://github.com/blixten85/filtered-movies/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/blixten85/filtered-movies)](LICENSE)
+
 Automatically updated lists of high-value movies and TV shows for Radarr and Sonarr, powered by [The Movie Database (TMDb)](https://www.themoviedb.org/).
 
 ## 📋 What This Provides
