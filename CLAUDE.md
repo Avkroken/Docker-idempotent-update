@@ -32,5 +32,8 @@ python filter_tv_shows.py
 ## Conventions
 
 - `TMDB_API_KEY` must be set as a secret/env var — never hardcoded
-- JSON output files are committed by the workflow ([skip ci] commits)
+- JSON output files are committed by the workflow — NOT with `[skip ci]` in the
+  commit message: that skips the required `repository-checks` job on the
+  resulting PR too, permanently blocking merge (found 2026-07-08, 5 PRs had
+  piled up in BLOCKED because of it)
 - Keep filter logic simple and well-commented so criteria are easy to adjust

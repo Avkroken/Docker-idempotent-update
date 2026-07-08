@@ -33,6 +33,12 @@ jobs:
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
         run: python3 filter_movies.py
 
+      # INTE "[skip ci]" i commit-meddelandet nedan: det hoppar över ALLA
+      # workflows för pushen, inklusive ci.yml:s obligatoriska
+      # repository-checks-jobb på PR:en som skapas — en obligatorisk check
+      # som medvetet aldrig körs blockerar merge permanent, precis som
+      # GITHUB_TOKEN-problemet ovan gjorde (2026-07-08, 5 PR:ar hade
+      # hopat sig i BLOCKED av just den här anledningen).
       - name: Commit and push if changed
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -43,7 +49,7 @@ jobs:
           if ! git diff --cached --quiet; then
             BRANCH="claude/update-movies-${GITHUB_RUN_ID}"
             git checkout -b "$BRANCH"
-            git commit -m "Update filtered movies [skip ci]"
+            git commit -m "Update filtered movies"
             git push origin "$BRANCH"
             PR_URL=$(gh pr create --title "Update filtered movies $(date +%Y-%m-%d)" \
               --body "Automated daily TMDB update." \
