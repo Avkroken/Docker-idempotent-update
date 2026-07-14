@@ -11,6 +11,8 @@ Delete all items from your Plex Watchlist via the Plex API.
 
 Get your Plex token from plex.tv → Settings → Account → Security.
 
+Optionally set `SENTRY_DSN` to enable error tracking (no-op if unset).
+
 ## Docker Compose
 
 ```bash
@@ -36,7 +38,7 @@ docker run --rm -e PLEX_TOKEN=your-token ghcr.io/blixten85/plex-clear-watchlist 
 
 ```bash
 export PLEX_TOKEN="your-token-here"
-pip3 install requests
+pip3 install -r requirements.txt
 python3 plex_clear_watchlist.py --dry-run
 ```
 

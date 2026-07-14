@@ -3,6 +3,16 @@ import os
 import sys
 import argparse
 import requests
+import sentry_sdk
+
+# --- Sentry (no-op if SENTRY_DSN is unset) ---
+sentry_sdk.init(
+    dsn=os.getenv("SENTRY_DSN"),
+    traces_sample_rate=1.0,
+    send_default_pii=False,
+    include_local_variables=False,
+    max_request_body_size="never",
+)
 
 # --- Configuration ---
 PLEX_TOKEN = os.environ.get("PLEX_TOKEN", "")
@@ -74,6 +84,8 @@ def main():
     try:
         items = get_watchlist()
     except requests.RequestException as e:
+        if not args.dry_run:
+            sentry_sdk.capture_exception(e)
         print(f"❌ Failed to fetch watchlist: {e}", file=sys.stderr)
         sys.exit(1)
 
