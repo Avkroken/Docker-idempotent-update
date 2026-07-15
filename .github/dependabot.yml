@@ -1,0 +1,12 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "saturday"
+      time: "01:00"
+      timezone: "Europe/Stockholm"
+    groups:
+      actions-patch-minor:
+        update-types: ["minor", "patch"]
