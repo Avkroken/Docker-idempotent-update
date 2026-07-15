@@ -43,10 +43,13 @@ def report_error_to_sentry(exc: BaseException) -> None:
         return
     store_url, public_key = parsed
 
+    environment = os.environ.get("SENTRY_ENVIRONMENT", "production")
+
     event = {
         "event_id": uuid.uuid4().hex,
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "platform": "python",
+        "environment": environment,
         "exception": {
             "values": [
                 {
