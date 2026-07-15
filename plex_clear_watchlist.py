@@ -5,15 +5,6 @@ import argparse
 import requests
 import sentry_sdk
 
-# --- Sentry (no-op if SENTRY_DSN is unset) ---
-sentry_sdk.init(
-    dsn=os.getenv("SENTRY_DSN"),
-    traces_sample_rate=1.0,
-    send_default_pii=False,
-    include_local_variables=False,
-    max_request_body_size="never",
-)
-
 # --- Configuration ---
 PLEX_TOKEN = os.environ.get("PLEX_TOKEN", "")
 if not PLEX_TOKEN:
@@ -78,6 +69,16 @@ def main():
     parser.add_argument("--limit", type=int, default=0, help="Limit number of items to delete (0 = all)")
     parser.add_argument("--keep", type=int, default=0, help="Keep the N most recent items")
     args = parser.parse_args()
+
+    # --- Sentry (no-op if SENTRY_DSN is unset; skipped entirely on --dry-run) ---
+    if not args.dry_run:
+        sentry_sdk.init(
+            dsn=os.getenv("SENTRY_DSN"),
+            traces_sample_rate=1.0,
+            send_default_pii=False,
+            include_local_variables=False,
+            max_request_body_size="never",
+        )
 
     print("📋 Fetching Plex Watchlist...")
 
