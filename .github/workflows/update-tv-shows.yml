@@ -31,6 +31,7 @@ jobs:
       - name: Run TV filter script
         env:
           TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: python3 filter_tv_shows.py
 
       # INTE "[skip ci]" i commit-meddelandet nedan: se update-movies.yml

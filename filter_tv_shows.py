@@ -21,6 +21,13 @@ import sys
 import time
 from datetime import datetime
 
+import sentry_sdk
+
+# Short-lived script: init must be paired with an explicit flush() before
+# exit, otherwise events queued in the background worker are lost when the
+# process ends.
+sentry_sdk.init(dsn=os.environ.get("SENTRY_DSN"), traces_sample_rate=0)
+
 
 # ===== CONFIGURATION =====
 
@@ -191,4 +198,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        sentry_sdk.capture_exception()
+        sentry_sdk.flush(timeout=5)
+        raise
+    else:
+        sentry_sdk.flush(timeout=5)
