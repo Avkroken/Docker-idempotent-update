@@ -30,6 +30,20 @@ def get_watchlist() -> list[dict]:
     while True:
         params = {"page": page, "pageSize": page_size, "sort": "addedAt:asc"}
         response = requests.get(WATCHLIST_URL, headers=HEADERS, params=params, timeout=REQUEST_TIMEOUT)
+        if response.status_code == 404:
+            if page == 1:
+                return items
+            # 404 mitt i pagineringen är sannolikt ett API-glapp, inte en
+            # äkta tom lista (den var ju inte tom på föregående sida) - om vi
+            # tystbara returnerade `items` här skulle anroparen tro att den
+            # FULLSTÄNDIGA listan hämtats och radera bara den delmängden,
+            # och lämna resten av watchlisten kvar utan varning.
+            raise requests.HTTPError(
+                f"Plex API returnerade 404 på sida {page} efter att {len(items)} "
+                "item(er) redan samlats in - avbryter istället för att riskera "
+                "en ofullständig radering.",
+                response=response,
+            )
         response.raise_for_status()
         data = response.json()
 
