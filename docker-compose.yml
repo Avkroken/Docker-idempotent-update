@@ -4,3 +4,4 @@ services:
     build: .
     environment:
       - PLEX_TOKEN=${PLEX_TOKEN}
+      - SENTRY_DSN=${SENTRY_DSN:-}

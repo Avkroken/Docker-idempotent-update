@@ -70,11 +70,10 @@ def main():
     parser.add_argument("--keep", type=int, default=0, help="Keep the N most recent items")
     args = parser.parse_args()
 
-    # --- Sentry (no-op if SENTRY_DSN is unset; skipped entirely on --dry-run) ---
     if not args.dry_run:
         sentry_sdk.init(
             dsn=os.getenv("SENTRY_DSN"),
-            traces_sample_rate=1.0,
+            traces_sample_rate=0.0,
             send_default_pii=False,
             include_local_variables=False,
             max_request_body_size="never",
@@ -125,6 +124,14 @@ def main():
             success += 1
         else:
             failed += 1
+            sentry_sdk.capture_message(
+                "Failed to delete item from watchlist",
+                level="error",
+                extras={
+                    "rating_key": rating_key,
+                },
+                fingerprint=["watchlist-delete-failure"],
+            )
 
     print(f"\n✅ Done! Deleted: {success}, Failed: {failed}")
 
