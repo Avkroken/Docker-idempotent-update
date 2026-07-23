@@ -8,15 +8,15 @@ wiki_page_id: "home"
 
 The following files were used as context for generating this wiki page:
 
-- [README.md](README.md)
-- [src/entrypoint.py](src/entrypoint.py)
-- [src/run.py](src/run.py)
-- [src/config.py](src/config.py)
-- [src/docker_update.py](src/docker_update.py)
-- [src/backup.py](src/backup.py)
-- [src/report.py](src/report.py)
-- [src/github_report.py](src/github_report.py)
-- [src/sentry_report.py](src/sentry_report.py)
+- [README.md](../../../README.md)
+- [src/entrypoint.py](../../../src/entrypoint.py)
+- [src/run.py](../../../src/run.py)
+- [src/config.py](../../../src/config.py)
+- [src/docker_update.py](../../../src/docker_update.py)
+- [src/backup.py](../../../src/backup.py)
+- [src/report.py](../../../src/report.py)
+- [src/github_report.py](../../../src/github_report.py)
+- [src/sentry_report.py](../../../src/sentry_report.py)
 </details>
 
 # Project Overview
@@ -121,6 +121,7 @@ Configuration is primarily driven by environment variables and a dedicated `back
 | `CRON_SCHEDULE` | `0 3 * * *` | Cron-formatted execution time. |
 | `DRY_RUN` | `false` | If `true`, logs actions without executing them. |
 | `COMPOSE_FILE` | *(unset)* | Path to a `docker-compose.yml` for Option B updates. |
+| `COMPOSE_ENV_FILE` | *(unset)* | Optional `.env` file path passed alongside `COMPOSE_FILE` for Compose-based updates. |
 
 Sources: [src/config.py:8-23](src/config.py#L8-L23), [README.md:124-135](README.md#L124-L135)
 

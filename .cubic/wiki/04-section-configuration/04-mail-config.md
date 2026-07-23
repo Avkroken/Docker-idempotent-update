@@ -8,12 +8,12 @@ wiki_page_id: "mail-config"
 
 The following files were used as context for generating this wiki page:
 
-- [src/config.py](src/config.py)
-- [src/report.py](src/report.py)
-- [src/entrypoint.py](src/entrypoint.py)
-- [src/run.py](src/run.py)
-- [README.md](README.md)
-- [CLAUDE.md](CLAUDE.md)
+- [src/config.py](../../../src/config.py)
+- [src/report.py](../../../src/report.py)
+- [src/entrypoint.py](../../../src/entrypoint.py)
+- [src/run.py](../../../src/run.py)
+- [README.md](../../../README.md)
+- [CLAUDE.md](../../../CLAUDE.md)
 
 </details>
 
@@ -38,7 +38,7 @@ The system uses specific environment variables to determine the recipient and co
 | Variable | Default | Description |
 | :--- | :--- | :--- |
 | `EMAIL_TO` | *(unset)* | The email address where the summary report will be sent. |
-| `DRY_RUN` | `false` | If set to `true`, log actions are recorded but no changes (or actual mail dispatch) are performed. |
+| `DRY_RUN` | `false` | If set to `true`, maintenance actions (Docker/rclone) are only logged, not applied. `send_report` still sends mail when `EMAIL_TO` and `/etc/msmtprc` are present — dry-run does not suppress email delivery. |
 
 Sources: [README.md:131-135](README.md#L131-L135), [src/config.py:13-15](src/config.py#L13-L15)
 

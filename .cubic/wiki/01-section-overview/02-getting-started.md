@@ -8,12 +8,12 @@ wiki_page_id: "getting-started"
 
 The following files were used as context for generating this wiki page:
 
-- [README.md](README.md)
-- [src/entrypoint.py](src/entrypoint.py)
-- [src/run.py](src/run.py)
-- [src/config.py](src/config.py)
-- [src/docker_update.py](src/docker_update.py)
-- [src/backup.py](src/backup.py)
+- [README.md](../../../README.md)
+- [src/entrypoint.py](../../../src/entrypoint.py)
+- [src/run.py](../../../src/run.py)
+- [src/config.py](../../../src/config.py)
+- [src/docker_update.py](../../../src/docker_update.py)
+- [src/backup.py](../../../src/backup.py)
 </details>
 
 # Getting Started

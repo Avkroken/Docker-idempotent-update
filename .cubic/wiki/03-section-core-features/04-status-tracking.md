@@ -8,12 +8,12 @@ wiki_page_id: "status-tracking"
 
 The following files were used as context for generating this wiki page:
 
-- [src/run.py](src/run.py)
-- [src/report.py](src/report.py)
-- [src/docker_update.py](src/docker_update.py)
-- [src/config.py](src/config.py)
-- [src/backup.py](src/backup.py)
-- [README.md](README.md)
+- [src/run.py](../../../src/run.py)
+- [src/report.py](../../../src/report.py)
+- [src/docker_update.py](../../../src/docker_update.py)
+- [src/config.py](../../../src/config.py)
+- [src/backup.py](../../../src/backup.py)
+- [README.md](../../../README.md)
 </details>
 
 # Status Tracking (Idempotency)
@@ -26,9 +26,10 @@ Sources: [src/run.py:45-66](src/run.py#L45-L66), [README.md:31-35](README.md#L31
 
 ## State Capture and Persistence
 
-At the end of every execution cycle, the system generates a state snapshot. This snapshot is stored in a structured JSON format to provide a historical record of the "last known good" or "last attempted" state.
+At the end of every execution cycle, the system generates a state snapshot. This snapshot is stored in a structured JSON format, overwriting the file from the previous run — only the latest snapshot is kept, not a historical record.
 
 ### Status File Schema
+
 The status information is written to a file defined by the `Config` class, typically located at `/config/status.json`. It captures the following fields:
 
 | Field | Type | Description |
@@ -43,7 +44,7 @@ The status information is written to a file defined by the `Config` class, typic
 Sources: [src/run.py:53-60](src/run.py#L53-L60), [src/config.py:16](src/config.py#L16)
 
 ### Persistence Logic
-The `_write_status` function in `src/run.py` handles the serialization of the runtime state to the filesystem. It uses standard Python `json` and `pathlib` modules to ensure the file is updated atomically.
+The `_write_status` function in `src/run.py` handles the serialization of the runtime state to the filesystem. It writes directly with `write_text` (not a temp-file-plus-rename), so the write is not atomic.
 
 ```python
 def _write_status(

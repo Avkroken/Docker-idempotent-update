@@ -8,15 +8,15 @@ wiki_page_id: "architecture"
 
 The following files were used as context for generating this wiki page:
 
-- [README.md](README.md)
-- [src/run.py](src/run.py)
-- [src/entrypoint.py](src/entrypoint.py)
-- [src/docker_update.py](src/docker_update.py)
-- [src/backup.py](src/backup.py)
-- [src/config.py](src/config.py)
-- [src/report.py](src/report.py)
-- [src/github_report.py](src/github_report.py)
-- [src/sentry_report.py](src/sentry_report.py)
+- [README.md](../../../README.md)
+- [src/run.py](../../../src/run.py)
+- [src/entrypoint.py](../../../src/entrypoint.py)
+- [src/docker_update.py](../../../src/docker_update.py)
+- [src/backup.py](../../../src/backup.py)
+- [src/config.py](../../../src/config.py)
+- [src/report.py](../../../src/report.py)
+- [src/github_report.py](../../../src/github_report.py)
+- [src/sentry_report.py](../../../src/sentry_report.py)
 </details>
 
 # Architecture Overview

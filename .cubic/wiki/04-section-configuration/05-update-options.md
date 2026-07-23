@@ -8,12 +8,12 @@ wiki_page_id: "update-options"
 
 The following files were used as context for generating this wiki page:
 
-- [src/docker_update.py](src/docker_update.py)
-- [README.md](README.md)
-- [src/config.py](src/config.py)
-- [src/run.py](src/run.py)
-- [src/entrypoint.py](src/entrypoint.py)
-- [CLAUDE.md](CLAUDE.md)
+- [src/docker_update.py](../../../src/docker_update.py)
+- [README.md](../../../README.md)
+- [src/config.py](../../../src/config.py)
+- [src/run.py](../../../src/run.py)
+- [src/entrypoint.py](../../../src/entrypoint.py)
+- [CLAUDE.md](../../../CLAUDE.md)
 
 </details>
 
@@ -131,6 +131,7 @@ The status file contains the following structure after an update:
   "mode": "update",
   "dry_run": false,
   "containers_updated": ["nginx", "db"],
+  "backup_failures": [],
   "docker_changes": "< container_old_id\n> container_new_id"
 }
 ```

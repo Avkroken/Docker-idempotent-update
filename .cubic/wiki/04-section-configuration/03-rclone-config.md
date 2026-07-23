@@ -8,11 +8,11 @@ wiki_page_id: "rclone-config"
 
 The following files were used as context for generating this wiki page:
 
-- [src/config.py](src/config.py)
-- [README.md](README.md)
-- [src/entrypoint.py](src/entrypoint.py)
-- [src/backup.py](src/backup.py)
-- [src/run.py](src/run.py)
+- [src/config.py](../../../src/config.py)
+- [README.md](../../../README.md)
+- [src/entrypoint.py](../../../src/entrypoint.py)
+- [src/backup.py](../../../src/backup.py)
+- [src/run.py](../../../src/run.py)
 </details>
 
 # Rclone Configuration Setup

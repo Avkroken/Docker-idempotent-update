@@ -8,12 +8,12 @@ wiki_page_id: "env-vars"
 
 The following files were used as context for generating this wiki page:
 
-- [src/config.py](src/config.py)
-- [README.md](README.md)
-- [src/entrypoint.py](src/entrypoint.py)
-- [src/github_report.py](src/github_report.py)
-- [src/sentry_report.py](src/sentry_report.py)
-- [src/run.py](src/run.py)
+- [src/config.py](../../../src/config.py)
+- [README.md](../../../README.md)
+- [src/entrypoint.py](../../../src/entrypoint.py)
+- [src/github_report.py](../../../src/github_report.py)
+- [src/sentry_report.py](../../../src/sentry_report.py)
+- [src/run.py](../../../src/run.py)
 </details>
 
 # Environment Variables Reference

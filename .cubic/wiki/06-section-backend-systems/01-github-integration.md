@@ -8,10 +8,10 @@ wiki_page_id: "github-integration"
 
 The following files were used as context for generating this wiki page:
 
-- [src/github_report.py](src/github_report.py)
-- [src/run.py](src/run.py)
-- [CLAUDE.md](CLAUDE.md)
-- [README.md](README.md)
+- [src/github_report.py](../../../src/github_report.py)
+- [src/run.py](../../../src/run.py)
+- [CLAUDE.md](../../../CLAUDE.md)
+- [README.md](../../../README.md)
 - [tests/test_pr_changes.sh](tests/test_pr_changes.sh)
 </details>
 

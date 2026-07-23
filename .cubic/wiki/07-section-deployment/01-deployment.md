@@ -8,12 +8,12 @@ wiki_page_id: "deployment"
 
 The following files were used as context for generating this wiki page:
 
-- [README.md](README.md)
-- [src/entrypoint.py](src/entrypoint.py)
-- [src/docker_update.py](src/docker_update.py)
-- [src/config.py](src/config.py)
-- [src/run.py](src/run.py)
-- [CLAUDE.md](CLAUDE.md)
+- [README.md](../../../README.md)
+- [src/entrypoint.py](../../../src/entrypoint.py)
+- [src/docker_update.py](../../../src/docker_update.py)
+- [src/config.py](../../../src/config.py)
+- [src/run.py](../../../src/run.py)
+- [CLAUDE.md](../../../CLAUDE.md)
 
 </details>
 

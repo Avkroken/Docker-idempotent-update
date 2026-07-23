@@ -8,12 +8,12 @@ wiki_page_id: "ai-guidelines"
 
 The following files were used as context for generating this wiki page:
 
-- [AGENTS.md](AGENTS.md)
-- [CLAUDE.md](CLAUDE.md)
-- [README.md](README.md)
-- [src/run.py](src/run.py)
-- [src/github_report.py](src/github_report.py)
-- [src/sentry_report.py](src/sentry_report.py)
+- [AGENTS.md](../../../AGENTS.md)
+- [CLAUDE.md](../../../CLAUDE.md)
+- [README.md](../../../README.md)
+- [src/run.py](../../../src/run.py)
+- [src/github_report.py](../../../src/github_report.py)
+- [src/sentry_report.py](../../../src/sentry_report.py)
 - [tests/test_pr_changes.sh](tests/test_pr_changes.sh)
 
 </details>
@@ -22,7 +22,7 @@ The following files were used as context for generating this wiki page:
 
 The AI Agent Guidelines define the operational boundaries, technical constraints, and automated reporting behaviors for AI agents interacting with the `docker-idempotent-update` repository. This project provides daily Docker host maintenance, image updates, and rclone-based backups within a single containerized environment.
 
-These guidelines ensure that AI agents adhere to the project's "stdlib-only" Python philosophy and strict security protocols regarding secret management and repository integrity. For more details on the core functionality, see the [README.md summary](#docker-idempotent-update).
+These guidelines ensure that AI agents adhere to the project's "stdlib-only" Python philosophy and strict security protocols regarding secret management and repository integrity. For more details on the core functionality, see the [README.md](../../../README.md).
 
 Sources: [AGENTS.md:1-5](AGENTS.md#L1-L5), [CLAUDE.md:1-5](CLAUDE.md#L1-L5), [README.md:1-12](README.md#L1-L12)
 

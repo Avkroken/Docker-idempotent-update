@@ -8,19 +8,19 @@ wiki_page_id: "execution-flow"
 
 The following files were used as context for generating this wiki page:
 
-- [src/entrypoint.py](src/entrypoint.py)
-- [src/run.py](src/run.py)
-- [src/config.py](src/config.py)
-- [src/docker_update.py](src/docker_update.py)
-- [src/backup.py](src/backup.py)
-- [src/report.py](src/report.py)
+- [src/entrypoint.py](../../../src/entrypoint.py)
+- [src/run.py](../../../src/run.py)
+- [src/config.py](../../../src/config.py)
+- [src/docker_update.py](../../../src/docker_update.py)
+- [src/backup.py](../../../src/backup.py)
+- [src/report.py](../../../src/report.py)
 </details>
 
 # Execution Flow & Scheduling
 
 The Execution Flow & Scheduling system manages the lifecycle of the `docker-idempotent-update` container, from initial environment validation and cron registration to the automated execution of maintenance tasks. The system is designed to run as a persistent background daemon that triggers Docker image updates and data backups based on a user-defined schedule.
 
-Sources: [src/entrypoint.py](src/entrypoint.py), [src/run.py](src/run.py), [README.md:10-18](README.md#L10-L18)
+Sources: [src/entrypoint.py](../../../src/entrypoint.py), [src/run.py](../../../src/run.py), [README.md:10-18](README.md#L10-L18)
 
 ## Initialization and Daemonization
 

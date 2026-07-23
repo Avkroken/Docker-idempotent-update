@@ -8,11 +8,11 @@ wiki_page_id: "app-backup"
 
 The following files were used as context for generating this wiki page:
 
-- [src/backup.py](src/backup.py)
-- [src/config.py](src/config.py)
-- [src/run.py](src/run.py)
-- [src/entrypoint.py](src/entrypoint.py)
-- [README.md](README.md)
+- [src/backup.py](../../../src/backup.py)
+- [src/config.py](../../../src/config.py)
+- [src/run.py](../../../src/run.py)
+- [src/entrypoint.py](../../../src/entrypoint.py)
+- [README.md](../../../README.md)
 </details>
 
 # App Data Backup
@@ -28,6 +28,7 @@ Sources: [README.md:9-16](README.md#L9-L16), [src/run.py:38-40](src/run.py#L38-L
 The backup system is integrated into the daily maintenance cycle initiated by `src/run.py`. When the system is in `backup` or `both` mode, it triggers the `run_backup` function.
 
 ### High-Level Flow
+
 The following diagram illustrates the lifecycle of a backup job from initialization to completion.
 
 ```mermaid
@@ -52,7 +53,8 @@ Sources: [src/run.py:38-40](src/run.py#L38-L40), [src/backup.py:42-53](src/backu
 The backup system is configured through a combination of environment variables and a dedicated configuration file.
 
 ### Core Configuration Elements
-The `Config` class reads settings from the environment and the `/config/backup.conf` file. If the configuration file does not exist at startup, the system creates it from a template.
+
+The `Config` class reads settings from the environment and the `/config/backup.conf` file. If backup mode is enabled (`needs_backup`) and the configuration file does not exist at startup, the system creates it from a template.
 
 | Variable | Default | Source | Description |
 | :--- | :--- | :--- | :--- |
@@ -64,6 +66,7 @@ The `Config` class reads settings from the environment and the `/config/backup.c
 Sources: [src/config.py:11-30](src/config.py#L11-L30), [src/entrypoint.py:42-47](src/entrypoint.py#L42-L47), [README.md:130-140](README.md#L130-L140)
 
 ### Configuration Initialization
+
 The following sequence shows how the system prepares the environment for backups during the container entrypoint phase.
 
 ```mermaid
@@ -89,11 +92,13 @@ Sources: [src/entrypoint.py:33-47](src/entrypoint.py#L33-L47), [src/config.py:27
 The execution phase is handled by `src/backup.py`, which wraps the `rclone` binary.
 
 ### Directory Discovery
+
 The system uses a helper function `_find_backup_dirs` to traverse the directory structure. It yields directories at the first and second level of each application folder. If a directory name matches one of the targets in `backup_dirs` (case-insensitive), it is queued for synchronization.
 
 Sources: [src/backup.py:53-57](src/backup.py#L53-L57), [src/backup.py:90-96](src/backup.py#L90-L96)
 
 ### Rclone Synchronization
+
 Syncing is performed using the `rclone sync` command with a specific set of performance and reliability flags.
 
 *  **Retry Mechanism:** The system attempts to sync each directory up to 3 times with a 15-second delay between failures.
@@ -104,8 +109,9 @@ Syncing is performed using the `rclone sync` command with a specific set of perf
 ```python
 _RCLONE_FLAGS = [
     "--fast-list", "--transfers", "4", "--checkers", "6",
-    "--tpslimit", "5", "--retries", "5", "--timeout", "15m",
-    "--checksum", "--delete-during"
+    "--tpslimit", "5", "--retries", "5", "--low-level-retries", "10",
+    "--timeout", "15m", "--contimeout", "30s",
+    "--checksum", "--delete-during", "--stats-one-line"
 ]
 ```
 
@@ -121,4 +127,5 @@ Upon completion, the backup system returns a list of failed sync operations to t
 Sources: [src/run.py:45-51](src/run.py#L45-L51), [src/run.py:57-65](src/run.py#L57-L65), [src/report.py:12-28](src/report.py#L12-L28)
 
 ## Conclusion
+
 The App Data Backup system provides a robust, configuration-driven approach to preserving container data. By automating the discovery of backup folders and leveraging the reliability of rclone, it ensures that application-specific backups are consistently offloaded to remote storage while providing clear visibility into successes and failures through status files and email notifications.

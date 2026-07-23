@@ -8,13 +8,13 @@ wiki_page_id: "security"
 
 The following files were used as context for generating this wiki page:
 
-- [SECURITY.md](SECURITY.md)
-- [AGENTS.md](AGENTS.md)
-- [CLAUDE.md](CLAUDE.md)
-- [src/github_report.py](src/github_report.py)
-- [src/sentry_report.py](src/sentry_report.py)
+- [SECURITY.md](../../../SECURITY.md)
+- [AGENTS.md](../../../AGENTS.md)
+- [CLAUDE.md](../../../CLAUDE.md)
+- [src/github_report.py](../../../src/github_report.py)
+- [src/sentry_report.py](../../../src/sentry_report.py)
 - [tests/test_pr_changes.sh](tests/test_pr_changes.sh)
-- [src/entrypoint.py](src/entrypoint.py)
+- [src/entrypoint.py](../../../src/entrypoint.py)
 </details>
 
 # Security Guidelines
@@ -46,7 +46,8 @@ The core security principle of the project is the absolute separation of code an
 Sources: [SECURITY.md:17-19](SECURITY.md#L17-L19), [AGENTS.md:21](AGENTS.md#L21), [tests/test_pr_changes.sh:222](tests/test_pr_changes.sh#L222)
 
 ### Configuration Isolation
-The system uses dedicated configuration files located in `/config/` within the container. These files are generated from templates if they do not exist, ensuring that sensitive values like mail server credentials (`msmtprc`) or rclone remotes (`rclone.conf`) remain outside the container image.
+
+The system uses dedicated configuration files located in `/config/` within the container. `backup.conf` and `msmtprc` are generated from templates if they don't exist. `rclone.conf` is the exception — it is never template-generated; it must be provisioned separately (`docker exec -it docker-maintenance rclone config`) before backup mode can run. This keeps sensitive values out of the container image.
 
 Sources: [src/entrypoint.py:46-59](src/entrypoint.py#L46-L59), [README.md:113-118](README.md#L113-L118)
 
@@ -77,11 +78,13 @@ flowchart TD
     GH_Check -- Yes --> GH_Search[Search for Duplicate Issue]
     GH_Search -- Not Found --> GH_Post[Post Redacted Issue]
     GH_Check -- No --> Sentry_Check{Sentry DSN Set?}
+    GH_Post --> Sentry_Check
     Sentry_Check -- Yes --> Sentry_Post[Post Redacted Envelope]
     Sentry_Check -- No --> End[Log and Exit]
 ```
 
-This diagram illustrates how exceptions are processed through redaction and fingerprinting before being dispatched to external services.
+This diagram illustrates how exceptions are processed through redaction and fingerprinting before being dispatched to external services. GitHub and Sentry reporting are independent, sequential operations — both are always attempted (each is a no-op if its own token/DSN isn't configured), neither is an exclusive fallback for the other.
+
 Sources: [src/github_report.py:65-117](src/github_report.py#L65-L117), [src/sentry_report.py:56-118](src/sentry_report.py#L56-L118)
 
 ## AI Agent and Developer Restrictions

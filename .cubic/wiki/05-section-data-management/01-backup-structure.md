@@ -8,12 +8,12 @@ wiki_page_id: "backup-structure"
 
 The following files were used as context for generating this wiki page:
 
-- [src/backup.py](src/backup.py)
-- [README.md](README.md)
-- [src/config.py](src/config.py)
-- [src/run.py](src/run.py)
-- [src/entrypoint.py](src/entrypoint.py)
-- [CLAUDE.md](CLAUDE.md)
+- [src/backup.py](../../../src/backup.py)
+- [README.md](../../../README.md)
+- [src/config.py](../../../src/config.py)
+- [src/run.py](../../../src/run.py)
+- [src/entrypoint.py](../../../src/entrypoint.py)
+- [CLAUDE.md](../../../CLAUDE.md)
 </details>
 
 # Backup Folder Structure

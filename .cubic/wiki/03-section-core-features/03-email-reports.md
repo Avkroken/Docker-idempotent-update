@@ -8,12 +8,12 @@ wiki_page_id: "email-reports"
 
 The following files were used as context for generating this wiki page:
 
-- [src/report.py](src/report.py)
-- [src/run.py](src/run.py)
-- [src/config.py](src/config.py)
-- [src/entrypoint.py](src/entrypoint.py)
-- [README.md](README.md)
-- [CLAUDE.md](CLAUDE.md)
+- [src/report.py](../../../src/report.py)
+- [src/run.py](../../../src/run.py)
+- [src/config.py](../../../src/config.py)
+- [src/entrypoint.py](../../../src/entrypoint.py)
+- [README.md](../../../README.md)
+- [CLAUDE.md](../../../CLAUDE.md)
 
 </details>
 
@@ -30,9 +30,10 @@ Sources: [README.md:12-25](README.md#L12-L25), [CLAUDE.md:3-8](CLAUDE.md#L3-L8),
 The notification logic is triggered at the end of the main execution loop in `src/run.py`. It collects output from previous steps and passes them to the reporting module.
 
 ### Notification Trigger Logic
+
 The system evaluates several conditions before attempting to send an email:
 1. **Recipient Configuration**: An email address must be defined in the `EMAIL_TO` environment variable.
-2. **Configuration File**: A valid `msmtprc` configuration file must exist at `/etc/msmtprc`.
+2. **Configuration File**: An `msmtprc` configuration file must exist at `/etc/msmtprc` (only existence is checked — its contents are not validated).
 3. **Change Detection**: At least one container must have been updated or at least one backup task must have failed.
 
 Sources: [src/report.py:11-14](src/report.py#L11-L14), [src/run.py:38-40](src/run.py#L38-L40)
@@ -61,6 +62,7 @@ Sources: [src/report.py:11-14](src/report.py#L11-L14), [src/run.py:38-40](src/ru
 The notification system requires both environment variables and template-based configuration files to function.
 
 ### Environment Variables
+
 | Variable | Default | Description |
 | :--- | :--- | :--- |
 | `EMAIL_TO` | *(unset)* | The recipient email address. If empty, no mail is sent. |
@@ -89,6 +91,7 @@ The subject line is dynamically generated to reflect the severity and type of ev
 Sources: [src/report.py:17-31](src/report.py#L17-L31)
 
 ### Data Components
+
 The body of the email is constructed by concatenating specific report parts:
 
 | Section | Data Source | Content Description |

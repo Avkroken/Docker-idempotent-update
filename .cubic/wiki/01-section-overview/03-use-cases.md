@@ -8,13 +8,13 @@ wiki_page_id: "use-cases"
 
 The following files were used as context for generating this wiki page:
 
-- [README.md](README.md)
-- [src/entrypoint.py](src/entrypoint.py)
-- [src/run.py](src/run.py)
-- [src/docker_update.py](src/docker_update.py)
-- [src/backup.py](src/backup.py)
-- [src/config.py](src/config.py)
-- [src/report.py](src/report.py)
+- [README.md](../../../README.md)
+- [src/entrypoint.py](../../../src/entrypoint.py)
+- [src/run.py](../../../src/run.py)
+- [src/docker_update.py](../../../src/docker_update.py)
+- [src/backup.py](../../../src/backup.py)
+- [src/config.py](../../../src/config.py)
+- [src/report.py](../../../src/report.py)
 </details>
 
 # Use Cases & Examples
@@ -152,12 +152,11 @@ The system is designed to be "quiet" and only sends notifications via `msmtp` wh
 Reports are generated and sent if:
 1. One or more containers were successfully updated.
 2. One or more backup operations failed.
-3. An unhandled exception occurred during the execution of `run.py`.
 
-If no changes occurred and all backups were successful, no email is sent.
+If no changes occurred and all backups were successful, no email is sent. An unhandled exception does not trigger an email — it is reported to GitHub and Sentry by `run.py` instead.
 
 ### Status Tracking
-Regardless of whether an email is sent, the system writes a `status.json` file to the `/config` directory after every run. This file contains the timestamp, mode, lists of updated containers, and backup failures.
+Regardless of whether an email is sent, the system writes a `status.json` file to the `/config` directory after successful execution (an unhandled exception aborts the run before this write). This file contains the timestamp, mode, lists of updated containers, and backup failures.
 
 ```json
 {

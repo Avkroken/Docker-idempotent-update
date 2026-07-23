@@ -8,13 +8,13 @@ wiki_page_id: "dev-guide"
 
 The following files were used as context for generating this wiki page:
 
-- [CLAUDE.md](CLAUDE.md)
-- [src/run.py](src/run.py)
-- [README.md](README.md)
+- [CLAUDE.md](../../../CLAUDE.md)
+- [src/run.py](../../../src/run.py)
+- [README.md](../../../README.md)
 - [tests/test_pr_changes.sh](tests/test_pr_changes.sh)
-- [AGENTS.md](AGENTS.md)
-- [src/entrypoint.py](src/entrypoint.py)
-- [src/config.py](src/config.py)
+- [AGENTS.md](../../../AGENTS.md)
+- [src/entrypoint.py](../../../src/entrypoint.py)
+- [src/config.py](../../../src/config.py)
 </details>
 
 # Local Development Guide

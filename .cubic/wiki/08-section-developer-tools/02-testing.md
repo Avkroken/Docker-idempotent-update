@@ -11,10 +11,10 @@ The following files were used as context for generating this wiki page:
 - [tests/test_pr_changes.sh](tests/test_pr_changes.sh)
 - [.github/pull_request_template.md](.github/pull_request_template.md)
 - [.github/workflows/ci.yml](.github/workflows/ci.yml)
-- [AGENTS.md](AGENTS.md)
-- [CLAUDE.md](CLAUDE.md)
-- [src/run.py](src/run.py)
-- [README.md](README.md)
+- [AGENTS.md](../../../AGENTS.md)
+- [CLAUDE.md](../../../CLAUDE.md)
+- [src/run.py](../../../src/run.py)
+- [README.md](../../../README.md)
 </details>
 
 # Testing Strategy
@@ -30,7 +30,8 @@ Sources: [CLAUDE.md:1-25](CLAUDE.md#L1-L25), [README.md:1-20](README.md#L1-L20)
 The project utilizes a multi-tiered approach to validation, ranging from syntax checks to automated workflow triggers.
 
 ### Local Development Validation
-Developers and AI agents are required to test changes locally using Docker Compose. The standard command for local testing is `docker compose run --rm`, which ensures a clean environment for each test iteration.
+
+Developers and AI agents are required to test changes locally using Docker Compose. The standard command for local testing is `docker compose run --rm docker-maintenance`, which ensures a clean environment for each test iteration.
 
 Sources: [CLAUDE.md:21](CLAUDE.md#L21), [AGENTS.md:21](AGENTS.md#L21)
 
@@ -63,7 +64,7 @@ Sources: [tests/test_pr_changes.sh:150-184](tests/test_pr_changes.sh#L150-L184)
 
 ## Execution Safety: Dry Run Mode
 
-A critical component of the testing and safety strategy is the `DRY_RUN` configuration. When enabled via the `DRY_RUN=true` environment variable, the system logs intended actions without performing any destructive operations or modifications to the host.
+A critical component of the testing and safety strategy is the `DRY_RUN` configuration. When enabled via the `DRY_RUN=true` environment variable, the system logs intended Docker/rclone actions without executing them — it still writes `status.json` (see below) and still sends the email report as usual.
 
 ### Dry Run Behavior by Module
 

@@ -8,13 +8,13 @@ wiki_page_id: "troubleshooting"
 
 The following files were used as context for generating this wiki page:
 
-- [README.md](README.md)
-- [src/run.py](src/run.py)
-- [src/github_report.py](src/github_report.py)
-- [src/sentry_report.py](src/sentry_report.py)
-- [src/report.py](src/report.py)
-- [src/entrypoint.py](src/entrypoint.py)
-- [CLAUDE.md](CLAUDE.md)
+- [README.md](../../../README.md)
+- [src/run.py](../../../src/run.py)
+- [src/github_report.py](../../../src/github_report.py)
+- [src/sentry_report.py](../../../src/sentry_report.py)
+- [src/report.py](../../../src/report.py)
+- [src/entrypoint.py](../../../src/entrypoint.py)
+- [CLAUDE.md](../../../CLAUDE.md)
 </details>
 
 # Troubleshooting & Logs
@@ -70,7 +70,8 @@ Sources: [src/github_report.py:34-52](src/github_report.py#L34-L52), [src/sentry
 The system persists its results in several locations to assist in manual troubleshooting.
 
 ### status.json
-After every run, a summary is written to `/config/status.json`. This file contains the results of the update and backup steps, even if no email was sent.
+
+After successful execution, a summary is written to `/config/status.json`. This file contains the results of the update and backup steps, even if no email was sent. If an unhandled exception aborts the run, the write never happens — that failure is instead reported to GitHub/Sentry.
 
 ```json
 {
@@ -102,4 +103,4 @@ Troubleshooting often involves validating the environment setup during the entry
 Sources: [src/entrypoint.py:27-51](src/entrypoint.py#L27-L51), [README.md:50-70](README.md#L50-L70)
 
 ## Summary
-The "Troubleshooting & Logs" module ensures operational transparency through multi-channel reporting. By combining local status persistence (`status.json`), standard output logging, and automated external error reporting with strict data redaction, the system allows for both proactive monitoring and reactive debugging of the daily maintenance tasks. Sources: [src/run.py](src/run.py), [CLAUDE.md](CLAUDE.md)
+The "Troubleshooting & Logs" module ensures operational transparency through multi-channel reporting. By combining local status persistence (`status.json`), standard output logging, and automated external error reporting with strict data redaction, the system allows for both proactive monitoring and reactive debugging of the daily maintenance tasks. Sources: [src/run.py](../../../src/run.py), [CLAUDE.md](../../../CLAUDE.md)

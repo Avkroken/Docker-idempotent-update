@@ -8,12 +8,12 @@ wiki_page_id: "backup-config"
 
 The following files were used as context for generating this wiki page:
 
-- [src/config.py](src/config.py)
-- [README.md](README.md)
-- [src/backup.py](src/backup.py)
-- [src/entrypoint.py](src/entrypoint.py)
-- [src/run.py](src/run.py)
-- [src/report.py](src/report.py)
+- [src/config.py](../../../src/config.py)
+- [README.md](../../../README.md)
+- [src/backup.py](../../../src/backup.py)
+- [src/entrypoint.py](../../../src/entrypoint.py)
+- [src/run.py](../../../src/run.py)
+- [src/report.py](../../../src/report.py)
 </details>
 
 # Backup Configuration
@@ -88,7 +88,7 @@ The backup behavior can be tuned using environment variables. These variables co
 | Variable | Default | Description |
 |:---|:---|:---|
 | `MODE` | `both` | Set to `backup` or `both` to enable backup features. |
-| `RCLONE_CONFIG` | `/config/rclone.conf` | The internal path to the rclone configuration. |
+| _(fixed path)_ | `/config/rclone.conf` | Not configurable via environment variable — the internal rclone configuration path is fixed. |
 | `CRON_SCHEDULE` | `0 3 * * *` | The crontab-formatted schedule for the daily run. |
 | `DRY_RUN` | `false` | If true, logs the sync operations without transferring data. |
 
