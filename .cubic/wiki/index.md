@@ -2,10 +2,10 @@
 
 > This directory is machine-managed by cubic. Edit wiki content through [cubic wiki settings](https://www.cubic.dev/wiki/blixten85/plex_clear_watchlist) and custom instructions.
 
-Wiki version: 1
-Source commit: af6ae0503923986d192d5acf7b94cfc5f3bbb202
+Wiki version: 2
+Source commit: 180d7493c144236f4e4fe2d2c3bc745b79ee0c8e
 Source branch: main
-Generated: 2026-07-19T20:20:44.804Z
+Generated: 2026-07-20T06:31:59.215Z
 
 ## Contents
 
@@ -23,34 +23,34 @@ Generated: 2026-07-19T20:20:44.804Z
 
 ### Core Features
 
-- [Dry Run Mode (--dry-run)](03-sec-features/01-page-dry-run.md)
-- [Limiting Deletions (--limit)](03-sec-features/02-page-limit.md)
-- [Keeping Recent Items (--keep)](03-sec-features/03-page-keep.md)
-- [Full Watchlist Clearing](03-sec-features/04-page-full-clear.md)
+- [Full Watchlist Clearing](03-sec-features/01-page-full-clear.md)
+- [Dry Run Mode (--dry-run)](03-sec-features/02-page-dry-run.md)
+- [Limiting Deletions (--limit)](03-sec-features/03-page-limit.md)
+- [Keeping Recent Items (--keep)](03-sec-features/04-page-keep.md)
 
 ### Configuration & Authentication
 
-- [Plex Token Management](04-sec-config/01-page-token.md)
+- [Plex Token Management](04-sec-config/01-page-token-management.md)
 - [Environment Variables Overview](04-sec-config/02-page-env-vars.md)
 - [Sentry Integration](04-sec-config/03-page-sentry.md)
 
 ### System Architecture & Data Flow
 
-- [Script Architecture](05-sec-architecture/01-page-script-arch.md)
+- [Script Architecture](05-sec-architecture/01-page-architecture.md)
 - [Plex API Integration](05-sec-architecture/02-page-plex-api.md)
-- [Dependency Management](05-sec-architecture/03-page-deps.md)
+- [Pagination Data Flow](05-sec-architecture/03-page-pagination.md)
 
 ### Deployment & Infrastructure
 
 - [GitHub Actions Workflow](06-sec-infrastructure/01-page-ci-cd.md)
-- [Docker Image Registry](06-sec-infrastructure/02-page-docker-registry.md)
-- [Dependency Updates (Renovate)](06-sec-infrastructure/03-page-renovate.md)
+- [Docker Image Registry](06-sec-infrastructure/02-page-ghcr.md)
+- [Core Dependencies](06-sec-infrastructure/03-page-python-deps.md)
+- [Dependency Updates (Renovate)](06-sec-infrastructure/04-page-deps-management.md)
 
 ### Development & Contributing
 
-- [Contributing Guidelines](07-sec-development/01-page-contributing.md)
-- [AI Agent Guide](07-sec-development/02-page-ai-guide.md)
-- [Pull Request Process](07-sec-development/03-page-pr-process.md)
+- [AI Agent & Developer Guide](07-sec-development/01-page-ai-guide.md)
+- [Pull Request Process](07-sec-development/02-page-pr-process.md)
 
 ### Security
 
@@ -59,6 +59,5 @@ Generated: 2026-07-19T20:20:44.804Z
 
 ### Troubleshooting & Support
 
-- [Common Issues & Debugging](09-sec-troubleshooting/01-page-debugging.md)
+- [Common Issues & Debugging](09-sec-troubleshooting/01-page-troubleshooting.md)
 - [Bug Reporting](09-sec-troubleshooting/02-page-bug-reports.md)
-- [Feature Requests](09-sec-troubleshooting/03-page-feature-requests.md)

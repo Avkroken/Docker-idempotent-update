@@ -18,101 +18,109 @@ The following files were used as context for generating this wiki page:
 
 # Docker Setup
 
-The Docker setup for `plex_clear_watchlist` is designed to provide a portable, one-shot execution environment for clearing items from a Plex Watchlist. By encapsulating the Python-based script and its dependencies—such as `requests` and `sentry-sdk`—within a container, the project ensures consistent behavior across different platforms without requiring local Python installation.
+The Docker setup for `plex_clear_watchlist` is designed to provide a portable, "one-shot" execution environment for the Python-based utility. Its primary purpose is to interact with the Plex API to manage and clear a user's Watchlist without requiring the user to manually manage Python dependencies like `requests` or `sentry-sdk`.
 
-Sources: [AGENTS.md:3-5](AGENTS.md#L3-L5), [CLAUDE.md:3-5](CLAUDE.md#L3-L5), [requirements.txt:1-2](requirements.txt#L1-L2)
+The environment leverages Docker and Docker Compose to automate the deployment of the script, ensuring that the correct Python 3.14 environment is utilized. Configuration is handled strictly through environment variables to maintain security and prevent credential leakage.
 
-The system relies on Docker Compose to manage environment variables and execution flags. It specifically targets a "one-shot" workflow where the container is spun up, performs the requested deletion or dry-run, and is then immediately removed.
+Sources: [AGENTS.md:3-8](AGENTS.md#L3-L8), [README.md:1-10](README.md#L1-L10), [requirements.txt:1-2](requirements.txt#L1-L2)
 
-Sources: [README.md:21-36](README.md#L21-L36), [docker-compose.yml:1-7](docker-compose.yml#L1-L7)
+## Container Architecture
 
-## Architecture and Components
+The system operates as a transient container service. When triggered via Docker Compose or the Docker CLI, it initializes the Python environment, executes the `plex_clear_watchlist.py` script, and terminates upon completion.
 
-The Docker implementation consists of a single service that interacts with the Plex API via the containerized Python script.
+### Deployment Flow
 
-### Service Definition
-The service, named `plex-clear-watchlist`, is configured to build from the local directory or pull the latest image from the GitHub Container Registry (GHCR).
+The following diagram illustrates the lifecycle of the Docker container from execution to completion.
 
 ```mermaid
-graph TD
-    User([User]) --> DC[Docker Compose]
-    DC --> Service[plex-clear-watchlist Service]
-    subgraph Container [Docker Container]
-        Service --> Script[plex_clear_watchlist.py]
-        Script --> Deps[Python Dependencies]
-    end
-    Script --> PlexAPI[Plex TV API]
-    Script -.-> Sentry[Sentry Error Tracking]
+flowchart TD
+    Start[User Command] --> Env[Load Environment Variables]
+    Env --> Pull[Pull/Build Image ghcr.io]
+    Pull --> Run[Run One-Shot Container]
+    Run --> Auth{Validate PLEX_TOKEN}
+    Auth -- Missing --> Fail[Exit Error 1]
+    Auth -- Valid --> Process[Execute Watchlist Logic]
+    Process --> End[Remove Container --rm]
 ```
 
-The diagram above illustrates how the Docker Compose service encapsulates the main script and its interactions with external APIs.
-Sources: [docker-compose.yml:2-7](docker-compose.yml#L2-L7), [AGENTS.md:14-19](AGENTS.md#L14-L19)
+Sources: [docker-compose.yml:1-7](docker-compose.yml#L1-L7), [plex_clear_watchlist.py:10-15](plex_clear_watchlist.py#L10-L15), [AGENTS.md:10-15](AGENTS.md#L10-L15)
 
-### Environment Configuration
-The containerized application requires specific environment variables to function, which are passed from the host system or a `.env` file through the Docker Compose layer.
+## Docker Compose Configuration
 
-| Variable | Source File | Description | Required |
-| :--- | :--- | :--- | :--- |
-| `PLEX_TOKEN` | `docker-compose.yml:6` | Authentication token for Plex API access | Yes |
-| `SENTRY_DSN` | `docker-compose.yml:7` | Data Source Name for error tracking via Sentry | No |
+The `docker-compose.yml` file defines a single service, `plex-clear-watchlist`, which uses the official image hosted on the GitHub Container Registry (GHCR).
 
-Sources: [README.md:14-19](README.md#L14-L19), [docker-compose.yml:5-7](docker-compose.yml#L5-L7), [plex_clear_watchlist.py:9-14](plex_clear_watchlist.py#L9-L14)
+### Service Specifications
 
-## Execution Flow
+| Parameter | Value / Source | Description |
+|---|---|---|
+| Image | `ghcr.io/blixten85/plex-clear-watchlist:latest` | The pre-built production image. |
+| Build | `.` | Context for building the image locally via Dockerfile. |
+| Environment | `PLEX_TOKEN`, `SENTRY_DSN` | Variables passed from the host to the container. |
 
-The Docker setup supports several execution modes through CLI arguments passed to the `docker compose run` command.
+Sources: [docker-compose.yml:2-7](docker-compose.yml#L2-L7), [README.md:40-42](README.md#L40-L42)
 
-### Initialization Sequence
-When the container starts, the script validates the presence of the `PLEX_TOKEN`. If missing, the process terminates with an error code.
+### Environment Variables
+Security is enforced by requiring sensitive information to be passed through environment variables rather than being hardcoded in the script or image.
+
+*  **`PLEX_TOKEN`**: Required. This token authorizes the script to modify the Plex Watchlist. It is sourced from the host environment or a `.env` file.
+*  **`SENTRY_DSN`**: Optional. Used for error tracking. If unset, it defaults to an empty string in the Compose file, and the application treats it as a no-op.
+
+```yaml
+services:
+  plex-clear-watchlist:
+    image: ghcr.io/blixten85/plex-clear-watchlist:latest
+    build: .
+    environment:
+      - PLEX_TOKEN=${PLEX_TOKEN}
+      - SENTRY_DSN=${SENTRY_DSN:-}
+```
+
+Sources: [docker-compose.yml:1-7](docker-compose.yml#L1-L7), [plex_clear_watchlist.py:10-15](plex_clear_watchlist.py#L10-L15), [SECURITY.md:15-17](SECURITY.md#L15-L17)
+
+## Execution Modes
+
+The Docker setup supports several execution flags passed as arguments to the container entrypoint. These flags allow users to control the deletion logic.
+
+### Comparison of Execution Commands
+
+| Command | Mode | Result |
+|---|---|---|
+| `docker compose run --rm ... --dry-run` | Simulation | Logs items that would be deleted without making API calls. |
+| `docker compose run --rm ... --limit 10` | Restricted | Deletes only the first 10 items found in the list. |
+| `docker compose run --rm ... --keep 5` | Retention | Keeps the 5 most recently added items and deletes the rest. |
+
+Sources: [README.md:23-28](README.md#L23-L28), [plex_clear_watchlist.py:91-95](plex_clear_watchlist.py#L91-L95), [CLAUDE.md:12-17](CLAUDE.md#L12-L17)
+
+### Container Data Flow
+The sequence diagram below shows how the Docker container interacts with external Plex and Sentry services.
 
 ```mermaid
 sequenceDiagram
     participant Host as Host Machine
     participant Docker as Docker Container
     participant Plex as Plex API
+    participant Sentry as Sentry (Optional)
 
-    Host->>Docker: docker compose run --rm [args]
-    Docker->>Docker: Validate PLEX_TOKEN
-    alt Token Missing
-        Docker-->>Host: Error: PLEX_TOKEN not set
-    else Token Present
-        Docker->>Plex: GET /api/v2/user/watchlist
-        Plex-->>Docker: Return Watchlist Items
-        Docker->>Docker: Filter Items (limit/keep)
-        loop For each item
-            Docker->>Plex: DELETE /api/v2/user/watchlist/{key}
-            Plex-->>Docker: 200/204 Success
-        end
-        Docker-->>Host: Execution Summary
+    Host->>Docker: docker compose run (env vars)
+    Docker->>Plex: GET /api/v2/user/watchlist
+    Plex-->>Docker: JSON Metadata
+    Note over Docker: Apply filters (limit/keep/dry-run)
+    alt is NOT dry-run
+        Docker->>Plex: DELETE /api/v2/user/watchlist/{rating_key}
+        Plex-->>Docker: HTTP 200/204
+    else is dry-run
+        Docker-->>Host: Log deletion intent
     end
+    alt error occurred
+        Docker->>Sentry: Capture Exception
+    end
+    Docker-->>Host: Process Complete
 ```
 
-This sequence shows the interaction between the host, the containerized environment, and the remote Plex API.
-Sources: [plex_clear_watchlist.py:9-14, 102-159](plex_clear_watchlist.py#L9-L14), [README.md:21-28](README.md#L21-L28)
-
-## Configuration and Flags
-
-Docker commands for this project utilize the `--rm` flag to ensure the container is removed after the one-shot task is completed. The following table details how Docker handles specific script flags:
-
-| Flag | Docker Usage Example | Outcome |
-| :--- | :--- | :--- |
-| `--dry-run` | `docker compose run --rm plex-clear-watchlist --dry-run` | Logs items that would be deleted without making API changes. |
-| `--limit N` | `docker compose run --rm plex-clear-watchlist --limit 10` | Deletes only the first N items found in the watchlist. |
-| `--keep N` | `docker compose run --rm plex-clear-watchlist --keep 5` | Retains the N most recently added items and deletes the rest. |
-
-Sources: [README.md:21-28, 43-47](README.md#L21-L28), [AGENTS.md:10-14](AGENTS.md#L10-L14), [plex_clear_watchlist.py:93-97](plex_clear_watchlist.py#L93-L97)
-
-## Dependency Management
-
-The Docker environment is built around Python 3.14 and includes specific libraries managed via `requirements.txt`.
-
-- **requests**: Used for all HTTP communication with the Plex API, including paginated GET requests and DELETE requests.
-- **sentry-sdk**: Utilized for error reporting if `SENTRY_DSN` is provided.
-
-Sources: [requirements.txt:1-2](requirements.txt#L1-L2), [plex_clear_watchlist.py:4-5, 33-35, 62-64](plex_clear_watchlist.py#L4-L5), [AGENTS.md:8](AGENTS.md#L8)
+Sources: [plex_clear_watchlist.py:27-88](plex_clear_watchlist.py#L27-L88), [README.md:20-35](README.md#L20-L35), [AGENTS.md:20-22](AGENTS.md#L20-L22)
 
 ## Summary
 
-The Docker setup provides a streamlined, ephemeral execution model for the `plex_clear_watchlist` tool. By utilizing Docker Compose, users can safely manage their `PLEX_TOKEN` and run the script with various filters (`--limit`, `--keep`) or in a safe mode (`--dry-run`) without polluting their local environment with Python dependencies.
+The Docker setup provides a secure and automated way to manage Plex Watchlists. By containerizing the Python script and its dependencies (`requests`, `sentry-sdk`), the project ensures consistent behavior across different environments. The integration with Docker Compose facilitates easy credential management via environment variables and supports various operational modes such as dry-runs and item limits.
 
-Sources: [README.md:21-36](README.md#L21-L36), [CLAUDE.md:14-18](CLAUDE.md#L14-L18)
+Sources: [README.md:1-5](README.md#L1-L5), [AGENTS.md:1-5](AGENTS.md#L1-L5), [requirements.txt:1-2](requirements.txt#L1-L2)

@@ -8,110 +8,99 @@ wiki_page_id: "page-sentry"
 
 The following files were used as context for generating this wiki page:
 
-- [README.md](README.md)
-- [docker-compose.yml](docker-compose.yml)
 - [plex_clear_watchlist.py](plex_clear_watchlist.py)
 - [requirements.txt](requirements.txt)
-- [AGENTS.md](AGENTS.md)
+- [docker-compose.yml](docker-compose.yml)
+- [README.md](README.md)
+- [SECURITY.md](SECURITY.md)
 </details>
 
 # Sentry Integration
 
-Sentry Integration in `plex_clear_watchlist` provides error tracking and monitoring capabilities for the automated watchlist cleanup process. It allows the application to capture and report exceptions and specific execution failures to a Sentry instance, enabling developers to monitor the health of the script in production environments.
+## Introduction
 
-The integration is designed as an optional component. It remains a "no-op" (non-operational) if the required configuration is missing, ensuring the script can run in environments where error tracking is not desired or configured.
-Sources: [README.md:15](README.md#L15), [plex_clear_watchlist.py:101-107](plex_clear_watchlist.py#L101-L107)
+Sentry integration in the Plex Clear Watchlist project provides automated error tracking and observability for the watchlist management script. It is designed to capture runtime exceptions during the retrieval of watchlist items and reporting failures during the deletion process. This integration allows developers to monitor the health of the tool in production environments, particularly when running as a scheduled task or within a containerized environment.
 
-## Configuration and Initialization
+The integration is optional and acts as a "no-op" if the required configuration is not provided. It leverages the official Sentry SDK to send telemetry data to a Sentry Data Source Name (DSN).
+Sources: [README.md:14](README.md#L14), [plex_clear_watchlist.py:101-107](plex_clear_watchlist.py#L101-L107)
 
-The Sentry SDK is initialized within the `main()` function of the application. The initialization is conditional; it only occurs if the `--dry-run` flag is not present, ensuring that test runs do not send telemetry to Sentry.
+## Architecture and Configuration
 
-### Configuration Parameters
-The integration is configured via environment variables. In Docker environments, these variables are typically passed through the container runtime or defined in orchestration files.
+The Sentry integration is managed through environment variables and the `sentry-sdk` Python library. It is initialized early in the `main()` function, provided that the execution is not a "dry run".
 
-| Parameter | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `SENTRY_DSN` | Environment Variable | None | The Data Source Name used to connect to the Sentry project. |
-| `traces_sample_rate` | Float (SDK Init) | `0.0` | Disables performance monitoring/tracing. |
-| `send_default_pii` | Boolean (SDK Init) | `False` | Prevents sending Personally Identifiable Information. |
-| `include_local_variables` | Boolean (SDK Init) | `False` | Disables sending local variable state with exceptions. |
+### Environment Setup
+The integration relies on the `SENTRY_DSN` environment variable. In containerized deployments, this variable is passed from the host to the container.
 
-Sources: [README.md:15](README.md#L15), [docker-compose.yml:7](docker-compose.yml#L7), [plex_clear_watchlist.py:101-107](plex_clear_watchlist.py#L101-L107)
+| Configuration Key | Source | Description |
+| :--- | :--- | :--- |
+| `SENTRY_DSN` | Environment Variable | The unique DSN for the Sentry project. If unset, tracking is disabled. |
+| `sentry-sdk` | `requirements.txt` | Minimum version `2.0.0` required for the script. |
+
+Sources: [requirements.txt:2](requirements.txt#L2), [docker-compose.yml:7](docker-compose.yml#L7), [README.md:14](README.md#L14), [plex_clear_watchlist.py:102](plex_clear_watchlist.py#L102)
 
 ### Initialization Logic
-The script uses the `sentry_sdk` package, which is defined as a dependency in the project.
-Sources: [requirements.txt:2](requirements.txt#L2)
+The script initializes Sentry with specific privacy and performance settings to minimize data leakage and overhead.
 
 ```python
-if not args.dry_run:
-    sentry_sdk.init(
-        dsn=os.getenv("SENTRY_DSN"),
-        traces_sample_rate=0.0,
-        send_default_pii=False,
-        include_local_variables=False,
-        max_request_body_size="never",
-    )
+sentry_sdk.init(
+    dsn=os.getenv("SENTRY_DSN"),
+    traces_sample_rate=0.0,
+    send_default_pii=False,
+    include_local_variables=False,
+    max_request_body_size="never",
+)
 ```
 
 Sources: [plex_clear_watchlist.py:101-107](plex_clear_watchlist.py#L101-L107)
 
-## Error Capture and Reporting Flow
+## Data Flow and Error Capture
 
-The integration captures two primary types of issues: unhandled exceptions during API interaction and logical failures during item deletion.
+Sentry captures data at two primary stages: during watchlist retrieval and during item deletion. The integration distinguishes between fatal exceptions (using `capture_exception`) and specific operational failures (using `capture_message`).
 
-### Exception Capture
-When the script fails to fetch the watchlist due to a network or API error, the `requests.RequestException` is caught. If not in dry-run mode, the exception is passed to `sentry_sdk.capture_exception(e)` before the script terminates.
-Sources: [plex_clear_watchlist.py:112-117](plex_clear_watchlist.py#L112-L117)
-
-### Message Capture (Deletion Failures)
-If the script successfully fetches the watchlist but fails to delete a specific item via the Plex API, it logs a message to Sentry using `sentry_sdk.capture_message`. This event includes extra metadata and a specific fingerprint for grouping.
-
-| Metadata Key | Description |
-| :--- | :--- |
-| `rating_key` | The unique identifier of the Plex item that failed to delete. |
-| `fingerprint` | Hardcoded to `["watchlist-delete-failure"]` for error grouping. |
-
-Sources: [plex_clear_watchlist.py:151-160](plex_clear_watchlist.py#L151-L160)
-
-### Logic Flow Diagram
-The following diagram illustrates how Sentry integration interacts with the main execution loop:
+### Error Tracking Flow
+This diagram illustrates how the script decides when to report errors to Sentry.
 
 ```mermaid
 flowchart TD
-    Start([Start Script]) --> CheckDry[Check --dry-run Flag]
-    CheckDry -- No --> InitSentry[Initialize Sentry SDK]
-    CheckDry -- Yes --> FetchList[Fetch Watchlist]
-    InitSentry --> FetchList
+    Start[Start Main] --> DryRun{Is Dry Run?}
+    DryRun -- Yes --> Fetch[Fetch Watchlist]
+    DryRun -- No --> InitSentry[Initialize Sentry SDK]
+    InitSentry --> Fetch
     
-    FetchList -- Request Exception --> CaptureExc[Sentry: capture_exception]
-    CaptureExc --> Exit([Exit 1])
+    Fetch --> SuccessFetch{Fetch Success?}
+    SuccessFetch -- No --> CaptureExc[sentry_sdk.capture_exception]
+    CaptureExc --> Exit[Exit Script]
     
-    FetchList -- Success --> Loop[Iterate Items]
-    Loop --> Delete[Delete Item]
-    
-    Delete -- HTTP Failure --> CaptureMsg[Sentry: capture_message]
-    CaptureMsg --> Loop
-    Delete -- Success --> Loop
-    Loop -- Complete --> Done([End Script])
+    SuccessFetch -- Yes --> Loop[Loop Items for Deletion]
+    Loop --> Delete{Delete Success?}
+    Delete -- No --> CaptureMsg[sentry_sdk.capture_message]
+    Delete -- Yes --> Next[Next Item]
+    CaptureMsg --> Next
+    Next --> Loop
 ```
 
-The diagram shows the conditional initialization and the two distinct capture points (exceptions and messages).
-Sources: [plex_clear_watchlist.py:101-160](plex_clear_watchlist.py#L101-L160)
+The integration ensures that data is only sent if `SENTRY_DSN` is configured and `--dry-run` is not active.
+Sources: [plex_clear_watchlist.py:100-112](plex_clear_watchlist.py#L100-L112), [plex_clear_watchlist.py:149-158](plex_clear_watchlist.py#L149-L158)
 
-## Deployment Environment
+### Captured Metadata
+When a deletion fails, the script sends a message with specific metadata to help identify the problematic entry without exposing sensitive user information.
 
-The integration is pre-configured for Docker environments. The `docker-compose.yml` file includes the `SENTRY_DSN` mapping, allowing the host's environment variable to be forwarded to the container.
+*  **Level**: `error`
+*  **Extras**: Includes the `rating_key` of the item that failed to delete.
+*  **Fingerprint**: Grouped under `["watchlist-delete-failure"]` to prevent issue duplication in the Sentry UI.
 
-```yaml
-services:
-  plex-clear-watchlist:
-    environment:
-      - PLEX_TOKEN=${PLEX_TOKEN}
-      - SENTRY_DSN=${SENTRY_DSN:-}
-```
+Sources: [plex_clear_watchlist.py:152-157](plex_clear_watchlist.py#L152-L157)
 
-Sources: [docker-compose.yml:1-7](docker-compose.yml#L1-L7), [AGENTS.md:12](AGENTS.md#L12)
+## Security Considerations
+
+The Sentry integration follows the project's security best practices by ensuring that sensitive credentials like the `PLEX_TOKEN` are not transmitted to Sentry.
+
+1.  **PII Masking**: The configuration explicitly sets `send_default_pii=False` and `include_local_variables=False` to ensure user identifiers and local script variables (which might contain the token) are not captured in stack traces.
+2.  **Request Body Security**: `max_request_body_size` is set to `"never"` to prevent capturing potentially sensitive API request payloads.
+3.  **Vulnerability Reporting**: While Sentry handles runtime errors, security vulnerabilities found in the integration or dependencies should be reported via GitHub's private reporting feature rather than Sentry issues.
+
+Sources: [plex_clear_watchlist.py:104-106](plex_clear_watchlist.py#L104-L106), [SECURITY.md:11-13](SECURITY.md#L11-L13)
 
 ## Summary
 
-Sentry integration in `plex_clear_watchlist` acts as a silent monitoring layer that activates only when a `SENTRY_DSN` is provided and the script is executing a live (non-dry) run. By capturing both broad request exceptions and granular item-level deletion failures, it provides comprehensive visibility into the tool's performance and reliability during automated operations.
+Sentry integration in `plex_clear_watchlist` provides a robust but privacy-conscious monitoring layer. By capturing both network-level exceptions and application-level deletion failures, it allows for proactive maintenance of the tool while strictly adhering to security guidelines regarding environment variables and Personally Identifiable Information (PII).

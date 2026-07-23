@@ -10,111 +10,129 @@ The following files were used as context for generating this wiki page:
 
 - [SECURITY.md](SECURITY.md)
 - [AGENTS.md](AGENTS.md)
+- [CLAUDE.md](CLAUDE.md)
 - [README.md](README.md)
 - [plex_clear_watchlist.py](plex_clear_watchlist.py)
 - [docker-compose.yml](docker-compose.yml)
 - [renovate.json](renovate.json)
-- [CLAUDE.md](CLAUDE.md)
 </details>
 
 # Security Best Practices
 
-## Introduction
+This page outlines the security protocols, configuration standards, and development practices used to maintain the integrity of the `plex_clear_watchlist` tool. The project focuses on the secure handling of Plex authentication tokens and the safe execution of bulk deletion operations.
 
-This document outlines the security policies, configuration requirements, and operational conventions for the `plex_clear_watchlist` tool. The project is designed to interact with the Plex API to delete items from a user's watchlist, requiring sensitive authentication data.
+The primary scope covers credential management, vulnerability reporting, and operational safeguards like dry-run modes to prevent accidental data loss.
 
-The primary security focus is on the protection of the `PLEX_TOKEN`, safe execution via dry-run modes, and maintaining up-to-date dependencies to mitigate known vulnerabilities.
-Sources: [SECURITY.md:1-20](SECURITY.md#L1-L20), [AGENTS.md:1-10](AGENTS.md#L1-L10), [README.md:1-15](README.md#L1-L15)
+Sources: [SECURITY.md:1-20](SECURITY.md#L1-L20), [AGENTS.md:1-40](AGENTS.md#L1-L40), [plex_clear_watchlist.py:1-150](plex_clear_watchlist.py#L1-L150)
 
 ## Credential Management
 
-The most critical security requirement is the handling of the `PLEX_TOKEN`. This token provides access to the user's Plex account and must be handled with care.
+The most critical security aspect of this project is the protection of the `PLEX_TOKEN`. This token provides full access to the user's Plex account via the API.
 
 ### Environment Variables
-Sensitive credentials must always be provided via environment variables. Hardcoding the `PLEX_TOKEN` or any other secret is strictly forbidden.
-Sources: [SECURITY.md:18-20](SECURITY.md#L18-L20), [AGENTS.md:21-21](AGENTS.md#L21), [CLAUDE.md:21-21](CLAUDE.md#L21)
-
-| Setting | Source | Purpose |
-| :--- | :--- | :--- |
-| `PLEX_TOKEN` | Environment Variable | Authenticates requests to the Plex API |
-| `SENTRY_DSN` | Environment Variable | (Optional) Error tracking endpoint |
-
-Sources: [plex_clear_watchlist.py:9-14](plex_clear_watchlist.py#L9-L14), [docker-compose.yml:7-8](docker-compose.yml#L7-L8)
-
-### Version Control Safety
-Files containing credentials, such as `.env` files, must never be committed to version control.
-Sources: [SECURITY.md:19-19](SECURITY.md#L19), [AGENTS.md:43-43](AGENTS.md#L43)
-
-## Secure API Interaction
-
-The application interacts with the Plex API using HTTPS. The `PLEX_TOKEN` is passed in the request headers to ensure it is not exposed in URL parameters or logs.
-
-```mermaid
-sequenceDiagram
-    participant App as "Python Script"
-    participant Plex as "Plex TV API"
-    App->>Plex: GET /api/v2/user/watchlist (X-Plex-Token Header)
-    Plex-->>App: JSON MediaContainer
-    App->>Plex: DELETE /api/v2/user/watchlist/{ratingKey} (X-Plex-Token Header)
-    Plex-->>App: HTTP 200/204 Success
-```
-
-This diagram illustrates the secure flow of authentication tokens via request headers.
-Sources: [plex_clear_watchlist.py:19-23](plex_clear_watchlist.py#L19-L23), [plex_clear_watchlist.py:61-63](plex_clear_watchlist.py#L61-L63)
-
-### Header Configuration
+Credentials must never be hardcoded in the source code. The application retrieves the token exclusively through the `PLEX_TOKEN` environment variable.
 
 ```python
+# plex_clear_watchlist.py:11-15
+PLEX_TOKEN = os.environ.get("PLEX_TOKEN", "")
+if not PLEX_TOKEN:
+    print("❌ Error: PLEX_TOKEN environment variable not set", file=sys.stderr)
+    sys.exit(1)
+```
+
+### Secrets in Deployment
+For Docker deployments, environment variables are passed through the shell or a `.env` file. The project guidelines strictly forbid committing `.env` files or credentials to version control.
+
+| Method | Implementation | Source |
+| :--- | :--- | :--- |
+| **Docker Compose** | Uses `${PLEX_TOKEN}` interpolation | [docker-compose.yml:7](docker-compose.yml#L7) |
+| **Manual Docker** | Uses `-e PLEX_TOKEN=your-token` | [README.md:36](README.md#L36) |
+| **Local Python** | Uses `export PLEX_TOKEN="..."` | [README.md:43](README.md#L43) |
+
+Sources: [SECURITY.md:15-17](SECURITY.md#L15-L17), [AGENTS.md:21-23](AGENTS.md#L21-L23), [CLAUDE.md:19-21](CLAUDE.md#L19-L21), [plex_clear_watchlist.py:11-15](plex_clear_watchlist.py#L11-L15)
+
+## API Security and Communication
+
+The tool communicates with the Plex API using HTTPS. Authentication is handled by including the token in the request headers rather than URL parameters, reducing the risk of token exposure in logs.
+
+```mermaid
+flowchart TD
+    Env[Environment Variables] -- PLEX_TOKEN --> Script[Python Script]
+    Script -- X-Plex-Token Header --> PlexAPI[Plex TV API]
+    PlexAPI -- JSON Response --> Script
+    Script -- DELETE Request --> PlexAPI
+```
+
+The diagram shows the flow of the authentication token from the environment into the HTTP headers for secure API communication.
+
+### Header Implementation
+The script constructs a header object that is reused for all requests to ensure consistent authentication.
+
+```python
+# plex_clear_watchlist.py:19-22
 HEADERS = {
     "X-Plex-Token": PLEX_TOKEN,
     "Accept": "application/json"
 }
 ```
 
-Sources: [plex_clear_watchlist.py:19-22](plex_clear_watchlist.py#L19-L22)
+Sources: [plex_clear_watchlist.py:19-22](plex_clear_watchlist.py#L19-L22), [plex_clear_watchlist.py:33](plex_clear_watchlist.py#L33), [plex_clear_watchlist.py:61](plex_clear_watchlist.py#L61)
 
-## Safe Execution (Dry Run)
+## Safe Execution and Error Handling
 
-To prevent accidental data loss, the project implements a `--dry-run` flag. This flag must be safe to execute without side effects. When active, the application logs what would be deleted without issuing DELETE requests to the API.
+To prevent unintended data loss during bulk operations, the application implements safety flags and telemetry controls.
+
+### Dry Run Functionality
+The `--dry-run` flag is an optional, recommended safety feature (`store_true`, defaults to off) — normal invocations perform real deletions. When `--dry-run` is passed, the script simulates the deletion process without making destructive API calls; include it explicitly for a safe test run.
 
 ```mermaid
-flowchart TD
-    Start[Start Application] --> Args{Parse Args}
-    Args -->|Dry Run| Fetch[Fetch Watchlist]
-    Fetch --> List[Log Items to Delete]
-    List --> End[Exit]
-    Args -->|Normal| FetchReal[Fetch Watchlist]
-    FetchReal --> Delete[Execute DELETE Requests]
-    Delete --> End
+sequenceDiagram
+    participant User
+    participant App as Main Script
+    participant API as Plex API
+    User->>App: run --dry-run
+    App->>API: GET /api/v2/user/watchlist
+    API-->>App: Return list of items
+    Note right of App: Log: [DRY RUN] Would delete...
+    App--xAPI: (DELETE request skipped)
 ```
 
-Sources: [plex_clear_watchlist.py:78-83](plex_clear_watchlist.py#L78-L83), [AGENTS.md:22-22](AGENTS.md#L22)
+The sequence diagram illustrates how the dry-run flag interrupts the deletion process while still validating the connection and item list.
 
-## Error Tracking and Privacy
+### Telemetry and Privacy
+Error tracking via Sentry is optional and configured to minimize data exposure:
+- **Default PII**: Disabled (`send_default_pii=False`).
+- **Local Variables**: Not included in crash reports.
+- **Request Bodies**: Never sent to Sentry servers.
 
-The application uses Sentry for error tracking. To maintain user privacy, the integration is configured to avoid sending Personally Identifiable Information (PII) or local variable values.
+Sources: [plex_clear_watchlist.py:84-140](plex_clear_watchlist.py#L84-L140), [AGENTS.md:21-23](AGENTS.md#L21-L23), [README.md:20-22](README.md#L20-L22)
 
-### Privacy Constraints
-- `send_default_pii` is set to `False`.
-- `include_local_variables` is set to `False`.
-- `max_request_body_size` is set to `never`.
-- Sentry is disabled during dry runs.
+## Software Supply Chain
 
-Sources: [plex_clear_watchlist.py:86-92](plex_clear_watchlist.py#L86-L92)
+The project employs automated tools to ensure dependencies are secure and up to date.
 
-## Dependency Maintenance
+*  **Dependabot**: Enabled to monitor and update Python dependencies.
+*  **Renovate**: Configured with recommended settings for automated dependency management.
+*  **Version Pinning**: Critical dependencies like `sentry-sdk` use version constraints in `requirements.txt`.
 
-To mitigate vulnerabilities in third-party libraries, the project uses automated tools to keep dependencies current.
-- **Renovate/Dependabot**: Enabled to automatically update `requirements.txt` and other dependencies.
-- **Supported Versions**: Only the `latest` version of the tool is officially supported for security patches.
+| Tool | Purpose | Source |
+| :--- | :--- | :--- |
+| **Dependabot** | General dependency updates | [SECURITY.md:18](SECURITY.md#L18) |
+| **Renovate** | Automated PRs for library updates | [renovate.json:1-6](renovate.json#L1-L6) |
+| **CI Workflow** | Validates code integrity on changes | [README.md:3](README.md#L3) |
 
-Sources: [SECURITY.md:8-12](SECURITY.md#L8-L12), [SECURITY.md:20-20](SECURITY.md#L20), [renovate.json:1-6](renovate.json#L1-L6)
+Sources: [SECURITY.md:18](SECURITY.md#L18), [renovate.json:1-6](renovate.json#L1-L6), [requirements.txt:1-2](requirements.txt#L1-L2)
 
 ## Vulnerability Reporting
 
-Security vulnerabilities should not be reported through public issues. Instead, users should use GitHub's private reporting feature to ensure confidential disclosure and patching.
-Sources: [SECURITY.md:14-17](SECURITY.md#L14-L17)
+The project follows a responsible disclosure policy. Users who discover security vulnerabilities are instructed to avoid public issues.
 
-## Summary
+1.  **Private Reporting**: Use the GitHub private reporting feature for confidential submission.
+2.  **Triage**: A response is expected within 48 hours.
+3.  **Remediation**: Confirmed issues result in an immediate patch release.
 
-Security in `plex_clear_watchlist` is achieved through strict environment variable usage for credentials, the implementation of side-effect-free dry runs, and automated dependency management. By following these practices, users can manage their Plex Watchlist while minimizing the risk of credential exposure or accidental data deletion.
+Sources: [SECURITY.md:7-13](SECURITY.md#L7-L13)
+
+## Summary of Best Practices
+
+Security in the Plex Clear Watchlist project is maintained through strict environment-based credential handling, the implementation of non-destructive execution modes, and automated dependency management. These layers ensure that the tool remains a safe utility for managing Plex account data without compromising user privacy or account security.

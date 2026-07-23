@@ -14,135 +14,146 @@ The following files were used as context for generating this wiki page:
 - [docker-compose.yml](docker-compose.yml)
 - [CLAUDE.md](CLAUDE.md)
 - [SECURITY.md](SECURITY.md)
-
 </details>
 
 # Use Cases & Examples
 
-The `plex_clear_watchlist` tool is a specialized utility designed to manage and prune entries from a user's Plex Watchlist via the official Plex API. It serves as a one-shot execution script, typically deployed via Docker, to automate the removal of media items that are no longer desired in the watchlist.
+This page provides a comprehensive overview of the operational scenarios and implementation details for the `plex_clear_watchlist` utility. The tool is designed as a single-purpose, one-shot script to manage and clear items from a user's Plex Watchlist via the official Plex API. 
 
-The system supports various operational modes, including safety-first simulations, partial deletions based on count, and retention of recent items. By leveraging environment variables for authentication and Sentry for error tracking, it provides a robust solution for maintaining a clean Plex profile.
+Sources: [README.md:10-12](README.md#L10-L12), [AGENTS.md:5](AGENTS.md#L5), [CLAUDE.md:5](CLAUDE.md#L5)
 
-Sources: [README.md:14-16](README.md#L14-L16), [AGENTS.md:3-5](AGENTS.md#L3-L5), [plex_clear_watchlist.py:108-112](plex_clear_watchlist.py#L108-L112)
+## Execution Workflows
 
-## Core Operational Logic
+The utility supports multiple execution environments, including Docker, Docker Compose, and direct Python execution. The core logic remains consistent across these platforms, utilizing environment variables for authentication and command-line arguments for operational control.
 
-The application follows a linear execution flow: authenticating with the Plex API, retrieving the full watchlist using pagination, applying user-defined filters (limit or keep), and executing deletion requests.
-
-### Data Flow Overview
-
-This diagram illustrates the progression from initial configuration check to the final deletion of items.
-
-```mermaid
-flowchart TD
-    Start([Start]) --> CheckToken{Check PLEX_TOKEN}
-    CheckToken -- Missing --> Error[Exit with Error]
-    CheckToken -- Present --> Fetch[Fetch Watchlist via API]
-    Fetch --> Paginate{More Pages?}
-    Paginate -- Yes --> Fetch
-    Paginate -- No --> Filter[Apply Limit/Keep Filters]
-    Filter --> Mode{Dry Run?}
-    Mode -- Yes --> Log[Log Proposed Deletions]
-    Mode -- No --> Delete[Execute DELETE Requests]
-    Log --> End([End])
-    Delete --> End
-```
-
-The script uses a `while True` loop to handle paginated results from `https://plex.tv/api/v2/user/watchlist`, ensuring large watchlists are fully captured before any processing occurs.
-Sources: [plex_clear_watchlist.py:27-58](plex_clear_watchlist.py#L27-L58), [plex_clear_watchlist.py:108-163](plex_clear_watchlist.py#L108-L163)
-
-## Execution Use Cases
-
-The tool supports four primary use cases through command-line arguments, which can be passed via Docker Compose or direct Python execution.
-
-### 1. Safety Simulation (Dry Run)
-The `--dry-run` flag allows users to verify which items will be targeted without making actual changes to the Plex account. This is a mandatory safety check recommended for first-time users.
-Sources: [README.md:46](README.md#L46), [CLAUDE.md:23](CLAUDE.md#L23)
-
-### 2. Full Watchlist Clearance
-The default behavior (without `--limit` or `--keep`) is to attempt deletion of every item retrieved from the API. This is used for a complete reset of the user's watchlist.
-Sources: [AGENTS.md:15](AGENTS.md#L15), [plex_clear_watchlist.py:136-139](plex_clear_watchlist.py#L136-L139)
-
-### 3. Partial Pruning (Limit)
-Using `--limit N` restricts the operation to deleting only the first `N` items found (sorted by `addedAt:asc`). This is useful for gradual cleanup.
-Sources: [README.md:47](README.md#L47), [plex_clear_watchlist.py:132-134](plex_clear_watchlist.py#L132-L134)
-
-### 4. Retaining Recent Additions (Keep)
-The `--keep N` argument ensures that the `N` most recently added items remain in the watchlist, while older items are removed.
-Sources: [README.md:48](README.md#L48), [plex_clear_watchlist.py:128-130](plex_clear_watchlist.py#L128-L130)
-
-| Feature | Argument | Impact |
-| :--- | :--- | :--- |
-| **Dry Run** | `--dry-run` | Logs actions to stdout; no API DELETE calls made. |
-| **Delete Limit** | `--limit <int>` | Deletes maximum of N items. |
-| **Retain Items** | `--keep <int>` | Preserves N newest items; deletes the rest. |
-
-Sources: [README.md:45-49](README.md#L45-L49), [plex_clear_watchlist.py:110-113](plex_clear_watchlist.py#L110-L113)
-
-## Technical Implementation Details
-
-### Configuration and Environment
-The application requires sensitive credentials and optional monitoring configurations provided via environment variables.
-
-| Variable | Required | Description |
-| :--- | :--- | :--- |
-| `PLEX_TOKEN` | Yes | Authentication token from plex.tv. |
-| `SENTRY_DSN` | No | Sentry Data Source Name for error reporting. |
-
-Sources: [README.md:20-24](README.md#L20-L24), [docker-compose.yml:6-8](docker-compose.yml#L6-L8), [plex_clear_watchlist.py:9-14](plex_clear_watchlist.py#L9-L14)
-
-### Sequence of API Interaction
-The following diagram details the interaction between the script and the Plex backend during a standard deletion cycle.
+### Basic Workflow Sequence
+The following diagram illustrates the standard sequence of events when the script is executed.
 
 ```mermaid
 sequenceDiagram
-    participant User
-    participant Script as plex_clear_watchlist.py
-    participant Plex as Plex API (v2)
+    participant User as "User/CLI"
+    participant Script as "Main Script"
+    participant Plex as "Plex API"
+    participant Sentry as "Sentry SDK"
 
-    User->>Script: Run with PLEX_TOKEN
-    Script->>Plex: GET /api/v2/user/watchlist?page=1
-    Plex-->>Script: JSON (Metadata + totalSize)
-    Note over Script: Paginate until items >= totalSize
-    Script->>Script: Apply Filter Logic (Limit/Keep)
-    loop for each item
-        Script->>Plex: DELETE /api/v2/user/watchlist/{ratingKey}
-        Plex-->>Script: HTTP 200/204
+    User->>Script: Execute with PLEX_TOKEN
+    alt Dry Run Disabled
+        Script->>Sentry: Initialize SDK (if DSN provided)
     end
-    Script->>User: Print Success/Failure Summary
+    Script->>Plex: GET /api/v2/user/watchlist (Paginated)
+    Plex-->>Script: Return Watchlist Items
+    
+    Note over Script: Apply Filters (--keep, --limit)
+    
+    loop For Each Item
+        alt Dry Run Enabled
+            Script->>User: Print "Would delete: Title"
+        else Dry Run Disabled
+            Script->>Plex: DELETE /api/v2/user/watchlist/{ratingKey}
+            Plex-->>Script: 200/204 Success
+            Script->>User: Print "Deleted: Title"
+        end
+    end
+    Script->>User: Print Summary (Success/Failed)
 ```
 
-Sources: [plex_clear_watchlist.py:27-72](plex_clear_watchlist.py#L27-L72), [plex_clear_watchlist.py:145-163](plex_clear_watchlist.py#L145-L163)
+Sources: [plex_clear_watchlist.py:91-163](plex_clear_watchlist.py#L91-L163), [README.md:17-45](README.md#L17-L45)
 
-### Error Handling and Security
-*  **Security**: The application explicitly forbids hardcoding the `PLEX_TOKEN` and recommends using `.env` files or direct environment injection.
-*  **API Resilience**: If the API returns a `404` error during pagination (but not on the first page), the script raises an `HTTPError` to prevent "partial radering" (incomplete deletion) where only a subset of items might be cleared due to an API glitch.
-*  **Monitoring**: When `SENTRY_DSN` is provided, the script initializes the Sentry SDK to capture exceptions during the fetch and delete phases.
+## Primary Use Cases
 
-Sources: [SECURITY.md:15-17](SECURITY.md#L15-L17), [plex_clear_watchlist.py:35-46](plex_clear_watchlist.py#L35-L46), [plex_clear_watchlist.py:115-121](plex_clear_watchlist.py#L115-L121)
+### 1. Safe Simulation (Dry Run)
+Before performing destructive operations, users can simulate the deletion process. This is the recommended first step to verify the scope of the operation without modifying the actual Watchlist.
 
-## Deployment Examples
+*  **Command**: `python3 plex_clear_watchlist.py --dry-run`
+*  **Logic**: The script fetches the list but skips the `delete_from_watchlist` function call, printing the items that *would* have been removed.
 
-### Docker Compose (Recommended)
-Users can define the service in a `docker-compose.yml` and execute via `run`.
+Sources: [plex_clear_watchlist.py:94](plex_clear_watchlist.py#L94), [README.md:47](README.md#L47), [CLAUDE.md:11](CLAUDE.md#L11)
 
-```bash
-# Using environment variables directly
-PLEX_TOKEN=your-token docker compose run --rm plex-clear-watchlist --keep 5
+### 2. Partial Cleanup (Limit)
+Users may want to clear a specific number of items rather than the entire list. This is useful for incremental cleaning or testing.
+
+*  **Command**: `python3 plex_clear_watchlist.py --limit 10`
+*  **Logic**: The script truncates the fetched item list to the specified integer `N` before starting the deletion loop.
+
+Sources: [plex_clear_watchlist.py:126-128](plex_clear_watchlist.py#L126-L128), [README.md:48](README.md#L48)
+
+### 3. Preserving Recent Additions (Keep)
+This use case allows users to purge older content while retaining a buffer of the most recently added items.
+
+*  **Command**: `python3 plex_clear_watchlist.py --keep 5`
+*  **Logic**: The script sorts items by `addedAt:asc` during fetching and then slices the list to remove the most recent `N` items from the deletion queue.
+
+Sources: [plex_clear_watchlist.py:38](plex_clear_watchlist.py#L38), [plex_clear_watchlist.py:122-124](plex_clear_watchlist.py#L122-L124), [README.md:49](README.md#L49)
+
+## Configuration and Parameters
+
+The system relies on a combination of environment variables for security-sensitive data and CLI flags for behavior modification.
+
+### Environment Variables
+
+| Variable | Required | Description |
+| :--- | :--- | :--- |
+| `PLEX_TOKEN` | Yes | Authentication token retrieved from plex.tv account settings. |
+| `SENTRY_DSN` | No | Error tracking endpoint for Sentry.io. |
+
+Sources: [plex_clear_watchlist.py:9-17](plex_clear_watchlist.py#L9-L17), [README.md:17-21](README.md#L17-L21), [SECURITY.md:15-16](SECURITY.md#L15-L16)
+
+### Command Line Arguments
+
+| Flag | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `--dry-run` | Boolean | False | Enables simulation mode. |
+| `--limit` | Integer | 0 | Maximum number of items to delete (0 = no limit). |
+| `--keep` | Integer | 0 | Number of most recent items to exclude from deletion. |
+
+Sources: [plex_clear_watchlist.py:93-96](plex_clear_watchlist.py#L93-L96), [README.md:46-50](README.md#L46-L50)
+
+## Internal Logic & Data Flow
+
+### Watchlist Retrieval Logic
+The script handles Plex's paginated API to ensure a complete list is retrieved before any operations begin.
+
+```mermaid
+flowchart TD
+    Start[Start Fetch] --> Init[Page=1, PageSize=100]
+    Init --> Request[Request Page]
+    Request --> Check404{HTTP 404?}
+    Check404 -- Yes (Page 1) --> Empty[Return Empty List]
+    Check404 -- Yes (Page >1) --> Error[Raise Error: Potential API Gap]
+    Check404 -- No --> Parse[Parse JSON MediaContainer]
+    Parse --> Accumulate[Add Metadata to items list]
+    Accumulate --> Complete{All items fetched?}
+    Complete -- No --> NextPage[Page++]
+    NextPage --> Request
+    Complete -- Yes --> Return[Return Full List]
 ```
 
-Sources: [docker-compose.yml:1-8](docker-compose.yml#L1-L8), [README.md:28-31](README.md#L28-L31)
+Sources: [plex_clear_watchlist.py:27-63](plex_clear_watchlist.py#L27-L63)
 
-### Standalone Python
-For environments without Docker, the script can be run directly after installing dependencies.
+### Deletion Safety
+The script implements specific safety checks:
+- **Authentication Check**: Exits immediately if `PLEX_TOKEN` is missing.
+- **Error Handling**: Checks the deletion response for HTTP 200/204 and returns `False` on any other status, reporting the failure via Sentry (if configured) instead of raising.
+- **Paging Integrity**: If a 404 is encountered after the first page, the script aborts to prevent "partial" deletions that might occur if the API intermittently fails.
 
-```bash
-export PLEX_TOKEN="your-token-here"
-pip3 install -r requirements.txt
-python3 plex_clear_watchlist.py --dry-run
+Sources: [plex_clear_watchlist.py:10-15](plex_clear_watchlist.py#L10-L15), [plex_clear_watchlist.py:41-52](plex_clear_watchlist.py#L41-L52), [plex_clear_watchlist.py:100-111](plex_clear_watchlist.py#L100-L111)
+
+## Implementation Example: Docker Compose
+The project is optimized for containerized execution. The `docker-compose.yml` file maps environment variables directly to the container environment.
+
+```yaml
+services:
+  plex-clear-watchlist:
+    image: ghcr.io/blixten85/plex-clear-watchlist:latest
+    build: .
+    environment:
+      - PLEX_TOKEN=${PLEX_TOKEN}
+      - SENTRY_DSN=${SENTRY_DSN:-}
 ```
 
-Sources: [requirements.txt:1-2](requirements.txt#L1-L2), [README.md:40-42](README.md#L40-L42)
+Sources: [docker-compose.yml:1-8](docker-compose.yml#L1-L8)
 
-### Summary
-`plex_clear_watchlist` provides a narrow but flexible set of tools for managing Plex Watchlists. By combining pagination-aware fetching with specific filtering logic (`limit` and `keep`), it allows users to automate profile maintenance securely using Docker-based one-shot containers.
+## Summary
+The `plex_clear_watchlist` tool provides a robust mechanism for automating Plex maintenance. By supporting dry runs, limits, and retention counts, it offers granular control over Watchlist management while maintaining security through environment-based credential handling.
+
+Sources: [AGENTS.md:5-15](AGENTS.md#L5-L15), [README.md:10-15](README.md#L10-L15)

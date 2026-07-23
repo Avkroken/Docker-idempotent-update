@@ -10,104 +10,85 @@ The following files were used as context for generating this wiki page:
 
 - [README.md](README.md)
 - [AGENTS.md](AGENTS.md)
-- [CLAUDE.md](CLAUDE.md)
-- [renovate.json](renovate.json)
 - [SECURITY.md](SECURITY.md)
+- [renovate.json](renovate.json)
 - [plex_clear_watchlist.py](plex_clear_watchlist.py)
 </details>
 
 # GitHub Actions Workflow
 
-The GitHub Actions workflow in the `plex_clear_watchlist` repository provides a structured Continuous Integration (CI) and delivery pipeline. It ensures code quality through automated testing and facilitates the distribution of the application as a Docker container. The workflow is integrated with external services like GitHub Container Registry (GHCR) and automated dependency management tools to maintain a secure and up-to-date codebase.
+The GitHub Actions Workflow in the `plex_clear_watchlist` repository facilitates Continuous Integration (CI) and automated delivery. Its primary purpose is to validate code changes, ensure security standards are met, and manage the automated update of project dependencies to maintain compatibility with Python 3.14 and the Plex API.
 
-Sources: [README.md:3-8](README.md#L3-L8), [AGENTS.md:35-43](AGENTS.md#L35-L43), [SECURITY.md:14-16](SECURITY.md#L14-L16)
+The workflow is integrated with the GitHub Container Registry (GHCR) for hosting Docker images. It ensures that all contributions follow the project's strict contribution guidelines, such as passing all tests before merging into the main branch. Sentry error tracking is configured at runtime (via `docker-compose.yml`/`SENTRY_DSN`), not by the CI workflow itself — `ci.yml` only tests and builds/pushes the image.
 
-## Continuous Integration and Delivery
+Sources: [README.md:3-6](README.md#L3-L6), [AGENTS.md:5-15](AGENTS.md#L5-L15), [AGENTS.md:27-38](AGENTS.md#L27-L38)
 
-The CI/CD pipeline is designed to validate changes and publish releases. It is represented by badges in the project documentation indicating the status of the "CI" workflow and "Release" versions.
+## CI and Automation Pipeline
 
-### Workflow Components
-The automation ecosystem consists of several automated processes:
-*  **CI Workflow:** Triggered on code changes to validate the application.
-*  **Release Management:** Handles versioning and publication of new releases.
-*  **Container Publishing:** Build and push Docker images to `ghcr.io/blixten85/plex-clear-watchlist`.
-*  **Dependency Updates:** Automated via Renovate and Dependabot to keep the tech stack (Python 3.14 and libraries) current.
+The project utilizes automated workflows to manage the lifecycle of the application. The CI pipeline, identified by the badge in the project documentation, triggers on repository events to validate the codebase.
 
-Sources: [README.md:3-8](README.md#L3-L8), [AGENTS.md:7-11](AGENTS.md#L7-L11), [renovate.json:1-6](renovate.json#L1-L6), [SECURITY.md:16](SECURITY.md#L16)
-
-### CI/CD Pipeline Flow
-The following diagram illustrates the conceptual flow of the GitHub Actions and automation tools within the project:
+### Continuous Integration (CI)
+The CI workflow ensures that every pull request or push to the repository meets the quality requirements. This includes running tests and verifying the build of the one-shot Docker container used for clearing the Plex Watchlist.
 
 ```mermaid
 flowchart TD
-    Start[Code Push / PR] --> CI[CI Workflow]
-    CI --> Tests{Pass Tests?}
-    Tests -- No --> Fail[Notify Developer]
-    Tests -- Yes --> Release[Release Workflow]
-    Release --> Docker[Build Docker Image]
-    Docker --> GHCR[Push to GHCR]
-    
-    SubGraph1[Maintenance]
-    Renovate[Renovate Bot] -.-> Start
-    Dependabot[Dependabot] -.-> Start
+    Start[Push / Pull Request] --> CI_Job[CI Workflow]
+    CI_Job --> Tests[Run Tests]
+    Tests -- Success --> Build[Build Docker Image]
+    Build -- Success --> Publish[Update Release/Image]
+    Tests -- Failure --> Stop[Notify Failure]
 ```
 
-This flow shows how code changes trigger validation before moving to release and containerization.
-Sources: [README.md:3-8](README.md#L3-L8), [AGENTS.md:35-38](AGENTS.md#L35-L38), [renovate.json:1-6](renovate.json#L1-L6), [SECURITY.md:16](SECURITY.md#L16)
+The diagram above illustrates the high-level flow of the CI pipeline from code submission to potential release.
 
-## Integration with External Tools
-
-The workflow interacts with several GitHub-native and third-party tools to manage security, dependencies, and deployment.
+Sources: [README.md:3-6](README.md#L3-L6), [AGENTS.md:27-30](AGENTS.md#L27-L30)
 
 ### Dependency Management
-The project uses `renovate.json` with the `config:recommended` preset to automate dependency updates. Additionally, Dependabot is explicitly enabled to maintain the security of the Python dependencies listed in `requirements.txt`.
+Automated dependency management is handled through Renovate and Dependabot. Renovate is configured using a standard recommended configuration to keep Python packages and Docker base images up to date.
 
 | Tool | Purpose | Configuration File |
 |---|---|---|
 | Renovate | Automated dependency updates | `renovate.json` |
-| Dependabot | Security updates and dependency tracking | `SECURITY.md` |
-| GitHub Actions | CI/CD Runner | `.github/workflows/ci.yml` (referenced by badge) |
+| Dependabot | Security and dependency updates | `.github/dependabot.yml` |
 
-Sources: [renovate.json:1-6](renovate.json#L1-L6), [SECURITY.md:16](SECURITY.md#L16), [README.md:3](README.md#L3)
+Sources: [renovate.json:1-6](renovate.json#L1-L6), [SECURITY.md:14-17](SECURITY.md#L14-L17)
 
-### Deployment and Distribution
-The workflow facilitates the distribution of the application as a one-shot Docker container. The images are tagged and stored in the GitHub Container Registry.
+## Security and Permissions
 
-```mermaid
-sequenceDiagram
-    participant Dev as Developer
-    participant GA as GitHub Actions
-    participant GHCR as GHCR.io
-    
-    Dev->>GA: Tag Release / Push to Main
-    activate GA
-    GA->>GA: Run Python Tests
-    GA->>GA: Build Docker Image (Python 3.14)
-    GA->>GHCR: Push Image (:latest / :version)
-    deactivate GA
-    GHCR-->>Dev: Image Available for Deployment
-```
+The workflow environment is governed by specific security policies and agent permissions to prevent unauthorized modifications to the repository infrastructure.
 
-The sequence shows the process from code submission to the availability of the Docker image.
-Sources: [README.md:3-8](README.md#L3-L8), [AGENTS.md:7-11](AGENTS.md#L7-L11), [CLAUDE.md:7-11](CLAUDE.md#L7-L11)
+### Workflow Constraints
+Automated agents and contributors are restricted from performing sensitive operations within the GitHub environment to protect secrets and repository integrity.
 
-## Security and Governance
+*  **Forbidden Actions:** Disabling workflows, modifying secrets, and changing GitHub organization settings are strictly prohibited.
+*  **Branch Protection:** Pushing directly to main or master branches is forbidden; all changes must arrive via pull requests.
+*  **Secret Handling:** `PLEX_TOKEN` and other secrets must never be hardcoded or committed to version control; they are injected via environment variables.
 
-The workflow and repository settings enforce specific rules for AI agents and developers to maintain project integrity.
-
-### Governance Rules
-The repository configuration defines strict permissions for contributors and automated agents:
-*  **Allowed:** Creating branches, modifying code, running tests, and opening PRs.
-*  **Forbidden:** Direct pushes to main/master, merging PRs, disabling workflows, and modifying secrets.
-
-Sources: [AGENTS.md:25-34](AGENTS.md#L25-L34)
+Sources: [AGENTS.md:32-38](AGENTS.md#L32-L38), [SECURITY.md:14-17](SECURITY.md#L14-L17)
 
 ### Vulnerability Reporting
-While CI handles automated checks, security vulnerabilities are managed via GitHub's private reporting feature rather than public issues.
+While automated tools scan for issues, the project maintains a private vulnerability reporting channel. Security advisories are handled through GitHub's private reporting feature rather than public issues.
 
 Sources: [SECURITY.md:7-12](SECURITY.md#L7-L12)
 
-## Summary
-The GitHub Actions Workflows in this project automate the lifecycle of the `plex_clear_watchlist` tool from code validation to Docker image distribution. By integrating Renovate, Dependabot, and GHCR, the project maintains a "latest" supported version that is both secure and easily deployable via Docker Compose.
+## Release and Distribution
 
-Sources: [README.md:3-8](README.md#L3-L8), [AGENTS.md:7-11](AGENTS.md#L7-L11), [SECURITY.md:3-5](SECURITY.md#L3-L5)
+Successful workflow completion leads to the generation of release artifacts. The project automates the distribution of the script through two primary channels: GitHub Releases and the GitHub Container Registry.
+
+### Distribution Components
+The following table describes the artifacts managed by the automation workflows:
+
+| Artifact | Source File | Description |
+|---|---|---|
+| Release Version | `plex_clear_watchlist.py` | GitHub Release tagged version. |
+| Docker Image | `Dockerfile` | Image hosted at `ghcr.io/blixten85/plex-clear-watchlist`. |
+| Documentation | `README.md` | Status badges for CI, Release, and Image size. |
+
+Sources: [README.md:3-6](README.md#L3-L6), [README.md:26-28](README.md#L26-L28), [AGENTS.md:14-20](AGENTS.md#L14-L20)
+
+### Error Tracking Integration
+If configured via the `SENTRY_DSN` environment variable, the application integrates with Sentry. The workflow supports this by ensuring the environment variable is properly forwarded, allowing the Python script to initialize the Sentry SDK for capturing runtime exceptions and delete failures.
+
+Sources: [README.md:11-13](README.md#L11-L13), [plex_clear_watchlist.py:92-99](plex_clear_watchlist.py#L92-L99), [plex_clear_watchlist.py:137-145](plex_clear_watchlist.py#L137-L145)
+
+The GitHub Actions Workflow serves as the backbone for maintaining the reliability and security of the `plex_clear_watchlist` tool. By enforcing testing, restricting direct branch access, and automating dependency updates, it ensures the project remains functional against the evolving Plex API and Python ecosystem.

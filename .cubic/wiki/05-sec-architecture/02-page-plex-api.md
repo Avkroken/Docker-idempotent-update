@@ -8,9 +8,9 @@ wiki_page_id: "page-plex-api"
 
 The following files were used as context for generating this wiki page:
 
-- [plex_clear_watchlist.py](plex_clear_watchlist.py)
-- [README.md](README.md)
+- [plex\_clear\_watchlist.py](plex_clear_watchlist.py)
 - [AGENTS.md](AGENTS.md)
+- [README.md](README.md)
 - [CLAUDE.md](CLAUDE.md)
 - [docker-compose.yml](docker-compose.yml)
 - [requirements.txt](requirements.txt)
@@ -18,110 +18,112 @@ The following files were used as context for generating this wiki page:
 
 # Plex API Integration
 
-The Plex API Integration within this project is designed to manage and clear a user's Plex Watchlist. It serves as a specialized interface to the Plex TV v2 API, facilitating authenticated requests to retrieve, filter, and delete watchlist items. The system is architected as a one-shot Python utility that can be executed directly or within a Docker container.
+The Plex API Integration is the core component of the `plex_clear_watchlist` project, designed to programmatically manage a user's Plex Watchlist. Its primary purpose is to retrieve items from the Watchlist and delete them based on user-defined constraints such as limits or retention counts. The integration is implemented as a single-purpose Python script that interfaces with Plex.tv's REST API endpoints.
 
-The integration focuses on a single-purpose workflow: fetching a complete, paginated list of media items associated with a user's account and performing destructive delete operations based on user-defined constraints like limits or retention counts.
-Sources: [plex_clear_watchlist.py:1-15](plex_clear_watchlist.py#L1-L15), [AGENTS.md:1-5](AGENTS.md#L1-L5), [README.md:1-10](README.md#L1-L10)
+This system is designed to run in isolated environments, specifically as a one-shot Docker container, ensuring that the necessary Python dependencies and environment configurations are encapsulated. It relies on secure authentication via a Plex Token and provides a safety mechanism through a dry-run mode to prevent accidental data loss.
+
+Sources: [plex\_clear\_watchlist.py:1-13](plex\_clear\_watchlist.py#L1-L13), [AGENTS.md:3-5](AGENTS.md#L3-L5), [README.md:10-15](README.md#L10-L15)
 
 ## Authentication and Configuration
 
-The integration requires a `PLEX_TOKEN` provided via environment variables. This token is used in the `X-Plex-Token` HTTP header for every request made to the Plex infrastructure.
+The integration requires a valid Plex authentication token, passed via the `PLEX_TOKEN` environment variable. This token is used in the HTTP headers for every request made to the Plex API.
 
-| Parameter | Source | Description |
-|---|---|---|
-| `PLEX_TOKEN` | Environment Variable | Required. User authentication token from plex.tv |
-| `SENTRY_DSN` | Environment Variable | Optional. Data Source Name for Sentry error tracking |
-| `BASE_URL` | Hardcoded | `https://plex.tv` |
-| `WATCHLIST_URL` | Derived | `https://plex.tv/api/v2/user/watchlist` |
+| Configuration Key | Source | Required | Description |
+|---|---|---|---|
+| `PLEX_TOKEN` | Environment Variable | Yes | Plex authentication token obtained from plex.tv |
+| `SENTRY_DSN` | Environment Variable | No | Data Source Name for Sentry error tracking |
+| `BASE_URL` | Hardcoded | N/A | Set to `https://plex.tv` |
+| `WATCHLIST_URL` | Hardcoded | N/A | Set to `https://plex.tv/api/v2/user/watchlist` |
 
-Sources: [plex_clear_watchlist.py:10-25](plex_clear_watchlist.py#L10-L25), [docker-compose.yml:7-9](docker-compose.yml#L7-L9), [README.md:12-15](README.md#L12-L15)
+Sources: [plex\_clear\_watchlist.py:9-22](plex\_clear\_watchlist.py#L9-L22), [docker-compose.yml:6-9](docker-compose.yml#L6-L9), [README.md:20-22](README.md#L20-L22)
 
-## Watchlist Retrieval and Paging
+### Request Headers
+All API calls include a standard header set to ensure the Plex server recognizes the request and returns the data in the expected format:
+- `X-Plex-Token`: The user's authentication token.
+- `Accept`: Set to `application/json` to receive JSON responses.
 
-The script implements a robust paginated retrieval system to ensure the entire watchlist is captured, even for accounts with a large number of items. It uses a default page size of 100 items and sorts them by `addedAt:asc` to facilitate consistent processing.
+Sources: [plex\_clear\_watchlist.py:19-23](plex\_clear\_watchlist.py#L19-L23)
 
-### Retrieval Logic Flow
+## Watchlist Retrieval Logic
+
+The retrieval process uses a paginated approach to ensure large watchlists are fully captured. The system requests items in batches of 100, sorted by the date they were added in ascending order.
 
 ```mermaid
 flowchart TD
-    Start[Start Retrieval] --> SetParams[Set Page=1, Size=100]
-    SetParams --> Req[GET /api/v2/user/watchlist]
-    Req --> Check404{HTTP 404?}
-    Check404 -- Yes & Page 1 --> Empty[Return Empty List]
-    Check404 -- Yes & Page > 1 --> Error[Raise HTTPError - Partial Data]
-    Check404 -- No --> Parse[Parse JSON Response]
-    Parse --> Extract[Add Metadata to Item List]
-    Extract --> CheckTotal{Items >= totalSize?}
-    CheckTotal -- No --> NextPage[Increment Page]
-    NextPage --> Req
-    CheckTotal -- Yes --> Return[Return Full List]
-</mermaid>
+    Start([Start Retrieval]) --> InitVars[Init page=1, items=[]]
+    InitVars --> APIReq[GET /api/v2/user/watchlist]
+    APIReq --> Check404{HTTP 404?}
+    Check404 -- Yes (Page 1) --> Empty[Return empty list]
+    Check404 -- Yes (Page > 1) --> Error[Raise HTTPError]
+    Check404 -- No --> ParseData[Parse MediaContainer JSON]
+    ParseData --> Append[Add Metadata to items list]
+    Append --> CheckEnd{items >= totalSize?}
+    CheckEnd -- Yes --> Return[Return all items]
+    CheckEnd -- No --> IncPage[Increment page]
+    IncPage --> APIReq
 ```
 
-The retrieval logic includes a specific safeguard against 404 errors during pagination to prevent accidental partial deletions.
-Sources: [plex_clear_watchlist.py:28-63](plex_clear_watchlist.py#L28-L63)
+The logic includes a specific safeguard against "API gaps" where a 404 error received during pagination (after the first page) results in a raised error rather than returning a partial list, preventing accidental incomplete deletions.
 
-## Filtering and Deletion Logic
+Sources: [plex\_clear\_watchlist.py:27-60](plex\_clear\_watchlist.py#L27-L60)
 
-Once the watchlist is retrieved, the integration applies filters based on user arguments before initiating the deletion process.
+## Watchlist Item Deletion
 
-### Filtering Operations
-- **Retention (--keep):** The script preserves the $N$ most recently added items by slicing the list (`items[:-args.keep]`).
-- **Limitation (--limit):** The script restricts the total number of deletions to $N$ items (`items[:args.limit]`).
+Deletion is performed per item using the Plex item's `ratingKey`. The system targets a specific endpoint for each individual removal.
 
-### Deletion Process
+### API Endpoints and Parameters
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v2/user/watchlist` | Fetches watchlist items with parameters `page`, `pageSize`, and `sort`. |
+| `DELETE` | `/api/v2/user/watchlist/{rating_key}` | Removes a specific item from the watchlist. |
+
+Sources: [plex\_clear\_watchlist.py:34](plex\_clear\_watchlist.py#L34), [plex\_clear\_watchlist.py:64-66](plex\_clear\_watchlist.py#L64-L66)
+
+### Execution Flow
+The `main` function orchestrates the flow from argument parsing to the final execution of deletions.
 
 ```mermaid
 sequenceDiagram
+    participant User
     participant Script as Main Script
-    participant API as Plex API
+    participant Plex as Plex.tv API
     participant Sentry as Sentry SDK
-    
+
+    User->>Script: Run with arguments (--limit, --keep, --dry-run)
+    Script->>Script: Parse Arguments
+    alt Not Dry Run
+        Script->>Sentry: Initialize SDK
+    end
+    Script->>Plex: GET /api/v2/user/watchlist
+    Plex-->>Script: Return Watchlist Items
+    Script->>Script: Filter items based on --keep and --limit
     loop For each item in filtered list
-        alt is Dry Run
-            Script->>Script: Log intended deletion
-        else Live Run
-            Script->>API: DELETE /api/v2/user/watchlist/{ratingKey}
-            API-->>Script: HTTP 200/204 (Success)
-            alt HTTP Failure
-                API-->>Script: HTTP Error
-                Script->>Sentry: Capture Message (Failure)
+        alt Dry Run
+            Script->>Script: Print [DRY RUN] message
+        else Actual Run
+            Script->>Plex: DELETE /api/v2/user/watchlist/{ratingKey}
+            Plex-->>Script: 200/204 Success
+            alt On Failure
+                Script->>Sentry: Capture Message
             end
         end
     end
+    Script->>User: Display final statistics
 ```
 
-Sources: [plex_clear_watchlist.py:90-145](plex_clear_watchlist.py#L90-L145), [AGENTS.md:15-20](AGENTS.md#L15-L20), [CLAUDE.md:15-20](CLAUDE.md#L15-L20)
-
-## API Endpoints and Methods
-
-The integration interacts with the following specific API structures:
-
-### GET /api/v2/user/watchlist
-Used to retrieve the list of items currently in the user's watchlist.
-- **Headers:** `X-Plex-Token`, `Accept: application/json`
-- **Query Parameters:**
-  - `page`: Current page number.
-  - `pageSize`: Number of items per page (100).
-  - `sort`: Sorting criteria (`addedAt:asc`).
-Sources: [plex_clear_watchlist.py:34-40](plex_clear_watchlist.py#L34-L40)
-
-### DELETE /api/v2/user/watchlist/{ratingKey}
-Used to remove a specific item from the watchlist.
-- **Path Parameter:** `ratingKey` - The unique identifier for the media item.
-- **Successful Status Codes:** 200, 204.
-Sources: [plex_clear_watchlist.py:65-77](plex_clear_watchlist.py#L65-L77)
+Sources: [plex\_clear\_watchlist.py:83-149](plex\_clear\_watchlist.py#L83-L149), [CLAUDE.md:12-17](CLAUDE.md#L12-L17)
 
 ## Error Handling and Monitoring
 
-The integration utilizes `sentry_sdk` for error reporting and detailed logging for local debugging.
+The integration utilizes the `requests` library for HTTP communication and `sentry-sdk` for error monitoring.
 
-- **Request Timeouts:** All API calls are configured with a `REQUEST_TIMEOUT` of 30 seconds.
-- **Sentry Integration:** If `SENTRY_DSN` is provided, exceptions during watchlist fetching and failures during specific item deletions are captured and sent to Sentry.
-- **Validation:** The script validates the presence of the `PLEX_TOKEN` at startup and terminates with an error message if it is missing.
-Sources: [plex_clear_watchlist.py:12-16](plex_clear_watchlist.py#L12-L16), [plex_clear_watchlist.py:25](plex_clear_watchlist.py#L25), [plex_clear_watchlist.py:100-108](plex_clear_watchlist.py#L100-L108), [requirements.txt:2](requirements.txt#L2)
+- **Request Timeouts**: All API requests are configured with a `REQUEST_TIMEOUT` of 30 seconds to prevent the script from hanging indefinitely.
+- **Sentry Integration**: If `SENTRY_DSN` is provided, the script captures exceptions during watchlist fetching and logs specific messages if a deletion attempt fails.
+- **Exit Codes**: The script exits with status `1` if the `PLEX_TOKEN` is missing or if the initial watchlist fetch fails.
+
+Sources: [plex\_clear\_watchlist.py:10-14](plex\_clear\_watchlist.py#L10-L14), [plex\_clear\_watchlist.py:24](plex\_clear\_watchlist.py#L24), [plex\_clear\_watchlist.py:91-98](plex\_clear\_watchlist.py#L91-L98), [requirements.txt:1-2](requirements.txt#L1-L2)
 
 ## Summary
 
-The Plex API Integration provides a specialized toolset for automated watchlist maintenance. By leveraging the Plex TV v2 API's pagination and deletion endpoints, it allows users to programmatically clear their lists while maintaining control through "keep" and "limit" parameters. The inclusion of a `--dry-run` mode ensures that users can verify destructive actions before execution.
-Sources: [plex_clear_watchlist.py:85-95](plex_clear_watchlist.py#L85-L95), [README.md:35-40](README.md#L35-L40)
+The Plex API Integration provides a robust mechanism for Watchlist management by wrapping standard RESTful calls in a Python-based execution flow. By implementing pagination, strict error handling for 404 responses during data fetching, and flexible filtering options (limit/keep), it ensures that Watchlist clearing is both efficient and controllable. The integration's reliance on environment variables and Docker ensures it remains a portable, secure, and easily deployable tool within the Plex ecosystem.
