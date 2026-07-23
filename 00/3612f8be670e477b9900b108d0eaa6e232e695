@@ -1,0 +1,92 @@
+.cubic/wiki/08-section-developer-tools/03-ai-guidelines.md
+  s_1c2bc845e6a689::t_dfc9a09b6bcfaf 25
+  s_1c2bc845e6a689::t_e2c957d5d85966 11-16
+.cubic/wiki/04-section-configuration/04-mail-config.md
+  s_1c2bc845e6a689::t_82992a6abe9d34 41
+  s_1c2bc845e6a689::t_ffd3f36f77a3cb 11-16
+.cubic/wiki/04-section-configuration/02-backup-config.md
+  s_1c2bc845e6a689::t_58089b8a8e6499 91
+  s_1c2bc845e6a689::t_2a104e1c657f87 11-16
+.cubic/wiki/03-section-core-features/01-docker-update.md
+  s_1c2bc845e6a689::t_b8428e025bb6e9 69,72
+  s_1c2bc845e6a689::t_a374fbdd1a1ea1 147,149
+  s_1c2bc845e6a689::t_f982d01855cf66 83
+  s_1c2bc845e6a689::t_0e08f8284a15d0 60
+  s_1c2bc845e6a689::t_0ee0de3213a575 11-16
+.cubic/wiki/03-section-core-features/04-status-tracking.md
+  s_1c2bc845e6a689::t_6287b550652770 29
+  s_1c2bc845e6a689::t_a1977af650ff56 32
+  s_1c2bc845e6a689::t_fb821d86824f49 47
+  s_1c2bc845e6a689::t_892a2b651015eb 11-16
+.cubic/wiki/01-section-overview/03-use-cases.md
+  s_1c2bc845e6a689::t_ff97c07d8fafe1 156,159
+  s_1c2bc845e6a689::t_f1551207015d56 11-17
+.cubic/wiki/03-section-core-features/03-email-reports.md
+  s_1c2bc845e6a689::t_ea8ef8e4c82b2c 33
+  s_1c2bc845e6a689::t_d04584bd24c71c 36
+  s_1c2bc845e6a689::t_fc43a03f5bb493 94
+  s_1c2bc845e6a689::t_95a30ad87568f9 65
+  s_1c2bc845e6a689::t_c4f0233fa6e908 11-16
+.cubic/wiki/09-section-troubleshooting/02-security.md
+  s_1c2bc845e6a689::t_393ebe0ec39cd2 49-50
+  s_1c2bc845e6a689::t_fa40f2f705d69f 81
+  s_1c2bc845e6a689::t_b9f4cdbe33215d 86-87
+.cubic/wiki/01-section-overview/01-home.md
+  s_1c2bc845e6a689::t_8565b407691e8b 124
+  s_1c2bc845e6a689::t_917f02fb79fd59 11-19
+.cubic/wiki/03-section-core-features/02-app-backup.md
+  s_1c2bc845e6a689::t_b2935f50ed756b 95
+  s_1c2bc845e6a689::t_eb555d0d22ac7d 101
+  s_1c2bc845e6a689::t_cf3eaa0ca48b0f 69
+  s_1c2bc845e6a689::t_39b6bc0fd864fc 56-57
+  s_1c2bc845e6a689::t_9228b10d6a16dc 112-114
+  s_1c2bc845e6a689::t_fd8d5cafaefc21 130
+  s_1c2bc845e6a689::t_73f54b1cb2d661 31
+  s_1c2bc845e6a689::t_4a754a375c3547 11-15
+.cubic/wiki/08-section-developer-tools/02-testing.md
+  s_1c2bc845e6a689::t_b8d9083ed035df 67
+  s_1c2bc845e6a689::t_2b3d0f6d4084b7 33-34
+  s_1c2bc845e6a689::t_3bfa0cdab31ed2 14-17
+.cubic/wiki/09-section-troubleshooting/01-troubleshooting.md
+  s_1c2bc845e6a689::t_e284288db59e61 73-74
+  s_1c2bc845e6a689::t_28c6ba8ef0b19b 11-17,106
+.cubic/wiki/04-section-configuration/05-update-options.md
+  s_1c2bc845e6a689::t_3c3dc9c21509e9 134
+  s_1c2bc845e6a689::t_aa024c2c3c71df 11-16
+.cubic/wiki/01-section-overview/02-getting-started.md
+  s_1c2bc845e6a689::t_f492fae3e981ac 11-16
+.cubic/wiki/02-section-architecture/01-architecture.md
+  s_1c2bc845e6a689::t_c184524d1e2185 11-19
+.cubic/wiki/02-section-architecture/02-execution-flow.md
+  s_1c2bc845e6a689::t_87b0a570bd47a1 11-16,23
+.cubic/wiki/04-section-configuration/01-env-vars.md
+  s_1c2bc845e6a689::t_349da79fca1d7c 11-16
+.cubic/wiki/04-section-configuration/03-rclone-config.md
+  s_1c2bc845e6a689::t_73e505ef6842d2 11-15
+.cubic/wiki/05-section-data-management/01-backup-structure.md
+  s_1c2bc845e6a689::t_3800cf5858e505 11-16
+.cubic/wiki/06-section-backend-systems/01-github-integration.md
+  s_1c2bc845e6a689::t_1e364823f37350 11-14
+.cubic/wiki/06-section-backend-systems/02-sentry-integration.md
+  s_1c2bc845e6a689::t_316eba7e563560 11-16,22,34,53,68,79,93,122,138,144
+.cubic/wiki/07-section-deployment/01-deployment.md
+  s_1c2bc845e6a689::t_3f5129d64c847f 11-16
+.cubic/wiki/08-section-developer-tools/01-dev-guide.md
+  s_1c2bc845e6a689::t_e9074006449549 11-13,15-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "003612f8be670e477b9900b108d0eaa6e232e695",
+  "prompts": {},
+  "sessions": {
+    "s_1c2bc845e6a689": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b7e5aa75-f353-4ff6-9e2a-8562f4261e66",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Anders Eriksson <36226327+blixten85@users.noreply.github.com>"
+    }
+  }
+}
