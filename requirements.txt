@@ -1,2 +1,2 @@
-requests
+requests==2.33.0
 sentry-sdk>=2.66.0
