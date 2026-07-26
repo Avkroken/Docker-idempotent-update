@@ -1,7 +1,7 @@
 import logging
 import socket
 import subprocess
-from datetime import date
+from datetime import UTC, datetime
 from pathlib import Path
 
 log = logging.getLogger(__name__)
@@ -14,7 +14,7 @@ def send_report(email_to: str, docker_changes: str, backup_failures: list[str]) 
         return
 
     host = socket.gethostname()
-    today = date.today().strftime("%Y-%m-%d")
+    today = datetime.now(tz=UTC).date().strftime("%Y-%m-%d")
 
     body_parts = []
     if docker_changes:

@@ -8,7 +8,6 @@ from .config import Config
 from .docker_update import run_update
 from .github_report import report_error_to_github
 from .report import send_report
-from .sentry_report import report_error_to_sentry
 
 logging.basicConfig(
     format="[%(asctime)s] %(message)s",
@@ -74,5 +73,4 @@ if __name__ == "__main__":
         report_error_to_github(
             "blixten85/docker-idempotent-update", "Daglig körning kraschade", exc
         )
-        report_error_to_sentry(exc)
         raise
