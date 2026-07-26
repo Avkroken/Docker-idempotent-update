@@ -23,8 +23,12 @@ def run_update(cfg: Config) -> tuple[str, list[str]]:
 
     if changes and not cfg.dry_run:
         log.info("Changes detected, pruning...")
-        subprocess.run(["docker", "container", "prune", "-f"], capture_output=True)
-        subprocess.run(["docker", "image", "prune", "-f"], capture_output=True)
+        subprocess.run(
+            ["docker", "container", "prune", "-f"], capture_output=True, check=False
+        )
+        subprocess.run(
+            ["docker", "image", "prune", "-f"], capture_output=True, check=False
+        )
 
     return changes, updated_containers
 
@@ -34,6 +38,7 @@ def _ps_snapshot() -> list[str]:
         ["docker", "ps", "--format", "{{.Names}} {{.Image}} {{.ImageID}}"],
         capture_output=True,
         text=True,
+        check=False,
     )
     if result.returncode != 0:
         raise RuntimeError(f"docker ps failed: {result.stderr.strip()}")
@@ -89,6 +94,7 @@ def _compose_image_snapshot(base_cmd: list[str], compose_dir: str) -> dict[str, 
         capture_output=True,
         text=True,
         cwd=compose_dir,
+        check=False,
     )
     snapshot: dict[str, str] = {}
     for line in result.stdout.splitlines():
@@ -112,7 +118,7 @@ def _socket_update(cfg: Config) -> list[str]:
         return []
 
     for image in images:
-        r = subprocess.run(["docker", "pull", image], capture_output=True)
+        r = subprocess.run(["docker", "pull", image], capture_output=True, check=False)
         if r.returncode != 0:
             log.warning("Failed to pull image: %s", image)
 
@@ -129,11 +135,13 @@ def _socket_update(cfg: Config) -> list[str]:
             ["docker", "inspect", "--format={{.Image}}", cid],
             capture_output=True,
             text=True,
+            check=False,
         ).stdout.strip()
         latest = subprocess.run(
             ["docker", "inspect", "--format={{.Id}}", image],
             capture_output=True,
             text=True,
+            check=False,
         ).stdout.strip()
         if latest and running != latest:
             name = (
@@ -141,6 +149,7 @@ def _socket_update(cfg: Config) -> list[str]:
                     ["docker", "inspect", "--format={{.Name}}", cid],
                     capture_output=True,
                     text=True,
+                    check=False,
                 )
                 .stdout.strip()
                 .lstrip("/")
@@ -155,7 +164,9 @@ def _socket_update(cfg: Config) -> list[str]:
 
 
 def _recreate_container(cid: str, image: str, name: str) -> bool:
-    result = subprocess.run(["docker", "inspect", cid], capture_output=True, text=True)
+    result = subprocess.run(
+        ["docker", "inspect", cid], capture_output=True, text=True, check=False
+    )
     if result.returncode != 0:
         return False
     try:
@@ -198,9 +209,9 @@ def _recreate_container(cid: str, image: str, name: str) -> bool:
 
     cmd.append(image)
 
-    subprocess.run(["docker", "stop", cid], capture_output=True)
-    subprocess.run(["docker", "rm", cid], capture_output=True)
-    r = subprocess.run(cmd, capture_output=True, text=True)
+    subprocess.run(["docker", "stop", cid], capture_output=True, check=False)
+    subprocess.run(["docker", "rm", cid], capture_output=True, check=False)
+    r = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if r.returncode != 0:
         log.error("Failed to recreate %s: %s", name, r.stderr.strip())
         return False
