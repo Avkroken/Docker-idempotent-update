@@ -29,3 +29,14 @@ updates:
     groups:
       actions-patch-minor:
         update-types: ["minor", "patch"]
+
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "00:10"
+      timezone: "Europe/Stockholm"
+    groups:
+      docker-compose-patch-minor:
+        update-types: ["minor", "patch"]
