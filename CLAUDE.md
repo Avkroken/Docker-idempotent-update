@@ -33,7 +33,3 @@ msmtprc.template
   per the rule above) — best-effort, opens a `@claude`-tagged GitHub issue
   with secrets/emails/paths redacted if `GITHUB_ERROR_REPORT_TOKEN` is
   set, no-ops otherwise
-- Same unhandled exception also calls `report_error_to_sentry()`
-  (`src/sentry_report.py`, stdlib-only/urllib — no `sentry-sdk` dependency)
-  — best-effort POST to Sentry's `store` API if `SENTRY_DSN` is set,
-  no-ops otherwise
