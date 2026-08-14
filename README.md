@@ -4,6 +4,21 @@
 [![Release](https://img.shields.io/github/v/release/blixten85/docker-idempotent-update)](https://github.com/blixten85/docker-idempotent-update/releases)
 [![License](https://img.shields.io/github/license/blixten85/docker-idempotent-update)](LICENSE)
 
+Schemalagt underhåll av den egna maskinparken. Tre delar som tidigare låg i
+var sitt repo:
+
+| Katalog | Vad |
+| --- | --- |
+| roten | Daglig underhållskörning av en Docker-värd (uppdatering och backup) |
+| `filtered-movies/` | Dagligen uppdaterade Radarr-/Sonarr-listor från TMDb |
+| `plex-clear-watchlist/` | Tömmer Plex-watchlistan via Plex API |
+
+Ingen av dem har någon produktionsyta — allt är cron eller container mot den
+egna hårdvaran, med samma slags automation. Tre repon gav tre uppsättningar
+workflows och regler för det.
+
+## Docker-värdunderhåll (roten)
+
 Daily Docker host maintenance in a single container. Run **either or both** of:
 
 1. **Update** — pull new images and recreate any containers that changed

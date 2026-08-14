@@ -1,0 +1,83 @@
+name: Uppdatera filtered-movies
+
+# Hämtar nya titlar från TMDB och öppnar en PR med resultatet. Filmer och
+# TV-serier är samma jobb med olika skript, därför en matris.
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - kind: movies
+            script: filter_movies.py
+            file: filtered_movies_radarr.json
+            title: filmer
+          - kind: tv-shows
+            script: filter_tv_shows.py
+            file: filtered_tv_shows_sonarr.json
+            title: TV-serier
+    defaults:
+      run:
+        working-directory: filtered-movies
+
+    steps:
+      # Kortlivad apptoken i stället för GITHUB_TOKEN: pushar gjorda med
+      # GITHUB_TOKEN triggar inga workflows, så PR:ens obligatoriska checkar
+      # kör aldrig och auto-merge fastnar i BLOCKED för evigt.
+      - name: Prägla apptoken
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ vars.CI_APP_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.x'
+          cache: pip
+
+      - name: Installera beroenden
+        run: pip install -r requirements.txt
+
+      - name: Kör ${{ matrix.script }}
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+        run: python3 ${{ matrix.script }}
+
+      # Inte "[skip ci]" i commit-meddelandet: det hoppar över ALLA workflows
+      # för pushen, inklusive de obligatoriska checkarna på PR:en som skapas.
+      # En obligatorisk check som medvetet aldrig körs blockerar merge
+      # permanent — samma fälla som GITHUB_TOKEN ovan.
+      - name: Committa och öppna PR om något ändrats
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          git config user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
+          git config user.email '${{ steps.app-token.outputs.installation-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com'
+          git add ${{ matrix.file }} || true
+          if git diff --cached --quiet; then
+            echo "Inga ändringar."
+            exit 0
+          fi
+          BRANCH="claude/filtered-movies-${{ matrix.kind }}-${GITHUB_RUN_ID}"
+          git checkout -b "$BRANCH"
+          git commit -m "Uppdatera filtrerade ${{ matrix.title }}"
+          git push origin "$BRANCH"
+          PR_URL=$(gh pr create --title "Uppdatera filtrerade ${{ matrix.title }} $(date +%Y-%m-%d)" \
+            --body "Daglig TMDB-uppdatering." \
+            --base main --head "$BRANCH")
+          gh pr merge --auto --squash --delete-branch "$PR_URL"
