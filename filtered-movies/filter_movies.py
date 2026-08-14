@@ -66,6 +66,11 @@ def get_movie_ids(pages=10):
                 if response.status_code == 429:
                     time.sleep(2)
                     response = requests.get(url, headers=HEADERS, timeout=30)
+                if response.status_code == 401:
+                    sys.exit(
+                        "ERROR: TMDb avvisade nyckeln (401). TMDB_API_KEY ska vara "
+                        "ett API Read Access Token (börjar med 'eyJ'), inte en v3-API-nyckel."
+                    )
                 if response.status_code == 200:
                     for movie in response.json().get("results", []):
                         if endpoint in endpoints:
@@ -73,7 +78,10 @@ def get_movie_ids(pages=10):
                             if not rd or rd < start_date_str or rd > today_str:
                                 continue
                         movie_ids.add(movie["id"])
-            except Exception:
+                else:
+                    print(f"  Varning: {response.status_code} för {url}", file=sys.stderr)
+            except Exception as e:
+                print(f"  Varning: {e}", file=sys.stderr)
                 time.sleep(1)
 
     return list(movie_ids)
@@ -157,6 +165,15 @@ def main():
 
     print("Filtering by budget...")
     movies = fetch_and_filter_movies(movie_ids)
+
+    # Publicera aldrig en tom lista över en befintlig fil. Radarr/Sonarr läser
+    # den här filen direkt från repot; ett tomt svar från TMDb (utgången nyckel,
+    # avbrott) skulle annars tömma prenumeranternas listor tyst.
+    if not movies and os.path.exists(OUTPUT_FILE):
+        sys.exit(
+            f"ERROR: 0 filmer efter filtrering, men {OUTPUT_FILE} finns redan. "
+            "Vägrar skriva över en befintlig lista med en tom."
+        )
 
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(movies, f, indent=2, ensure_ascii=False)

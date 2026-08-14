@@ -187,6 +187,15 @@ def main():
     print("Filtering by prestige networks...")
     shows = fetch_and_filter_shows(tv_ids)
 
+    # Publicera aldrig en tom lista över en befintlig fil. Radarr/Sonarr läser
+    # den här filen direkt från repot; ett tomt svar från TMDb skulle annars
+    # tömma prenumeranternas listor tyst.
+    if not shows and os.path.exists(OUTPUT_FILE):
+        sys.exit(
+            f"ERROR: 0 serier efter filtrering, men {OUTPUT_FILE} finns redan. "
+            "Vägrar skriva över en befintlig lista med en tom."
+        )
+
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(shows, f, indent=2, ensure_ascii=False)
 
