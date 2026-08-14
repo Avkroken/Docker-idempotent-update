@@ -21,6 +21,9 @@ jobs:
       pull-requests: write
     strategy:
       fail-fast: false
+      # Båda matrisjobben committar på dev. Parallellt skulle det andra få en
+      # icke-fast-forward-push; ett i taget slipper vi den kapplöpningen.
+      max-parallel: 1
       matrix:
         include:
           - kind: movies
@@ -46,8 +49,12 @@ jobs:
           app-id: ${{ vars.POLITIKER_OCH_IDEMPOTENT }}
           private-key: ${{ secrets.POLITIKER_OCH_IDEMPOTENT }}
 
+      # dev, inte main: repot har två fasta grenar och rulesetet tillåter
+      # inte att nya skapas. Jobbet committar på dev och låter PR:en dev->main
+      # bära ändringen vidare.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: dev
           token: ${{ steps.app-token.outputs.token }}
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
@@ -78,11 +85,18 @@ jobs:
             echo "Inga ändringar."
             exit 0
           fi
-          BRANCH="claude/filtered-movies-${{ matrix.kind }}-${GITHUB_RUN_ID}"
-          git checkout -b "$BRANCH"
           git commit -m "Uppdatera filtrerade ${{ matrix.title }}"
-          git push origin "$BRANCH"
-          PR_URL=$(gh pr create --title "Uppdatera filtrerade ${{ matrix.title }} $(date +%Y-%m-%d)" \
-            --body "Daglig TMDB-uppdatering." \
-            --base main --head "$BRANCH")
-          gh pr merge --auto --squash --delete-branch "$PR_URL"
+          # Hämta in vad ett parallellt eller manuellt startat jobb hunnit
+          # lägga på dev, så pushen förblir fast-forward.
+          git pull --rebase origin dev
+          git push origin dev
+          # En öppen PR dev->main kan redan finnas, från det andra matrisjobbet
+          # eller från annat pågående arbete. gh pr create felar på en dubblett,
+          # så återanvänd den i så fall.
+          PR_URL=$(gh pr list --base main --head dev --state open --json url --jq '.[0].url // empty')
+          if [ -z "$PR_URL" ]; then
+            PR_URL=$(gh pr create --base main --head dev \
+              --title "Uppdatera filtrerade listor $(date +%Y-%m-%d)" \
+              --body "Daglig TMDB-uppdatering.")
+          fi
+          gh pr merge --auto --squash "$PR_URL"
