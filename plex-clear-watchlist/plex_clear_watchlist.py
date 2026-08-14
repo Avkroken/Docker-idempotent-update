@@ -3,7 +3,6 @@ import os
 import sys
 import argparse
 import requests
-import sentry_sdk
 
 # --- Configuration ---
 PLEX_TOKEN = os.environ.get("PLEX_TOKEN", "")
@@ -84,22 +83,11 @@ def main():
     parser.add_argument("--keep", type=int, default=0, help="Keep the N most recent items")
     args = parser.parse_args()
 
-    if not args.dry_run:
-        sentry_sdk.init(
-            dsn=os.getenv("SENTRY_DSN"),
-            traces_sample_rate=0.0,
-            send_default_pii=False,
-            include_local_variables=False,
-            max_request_body_size="never",
-        )
-
     print("📋 Fetching Plex Watchlist...")
 
     try:
         items = get_watchlist()
     except requests.RequestException as e:
-        if not args.dry_run:
-            sentry_sdk.capture_exception(e)
         print(f"❌ Failed to fetch watchlist: {e}", file=sys.stderr)
         sys.exit(1)
 
@@ -138,14 +126,6 @@ def main():
             success += 1
         else:
             failed += 1
-            sentry_sdk.capture_message(
-                "Failed to delete item from watchlist",
-                level="error",
-                extras={
-                    "rating_key": rating_key,
-                },
-                fingerprint=["watchlist-delete-failure"],
-            )
 
     print(f"\n✅ Done! Deleted: {success}, Failed: {failed}")
 

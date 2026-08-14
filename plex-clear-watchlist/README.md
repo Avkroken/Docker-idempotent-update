@@ -11,8 +11,6 @@ Delete all items from your Plex Watchlist via the Plex API.
 
 Get your Plex token from plex.tv → Settings → Account → Security.
 
-Optionally set `SENTRY_DSN` to enable error tracking (no-op if unset). Docker Compose forwards it automatically; with `docker run`, add `-e SENTRY_DSN`.
-
 ## Docker Compose
 
 ```bash
