@@ -11,3 +11,43 @@ updates:
     groups:
       actions-patch-minor:
         update-types: ["minor", "patch"]
+
+  # requirements.txt finns i filtered-movies/ och plex-clear-watchlist/.
+  # Roten har inga pip-beroenden — src/ kör på standardbiblioteket.
+  - package-ecosystem: "pip"
+    assignees: ["blixten85"]
+    directories:
+      - "/filtered-movies"
+      - "/plex-clear-watchlist"
+    schedule:
+      interval: "weekly"
+      day: "saturday"
+      time: "01:10"
+      timezone: "Europe/Stockholm"
+    groups:
+      pip-patch-minor:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "docker"
+    assignees: ["blixten85"]
+    directory: "/plex-clear-watchlist"
+    schedule:
+      interval: "weekly"
+      day: "saturday"
+      time: "01:20"
+      timezone: "Europe/Stockholm"
+    groups:
+      docker-patch-minor:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "docker-compose"
+    assignees: ["blixten85"]
+    directory: "/plex-clear-watchlist"
+    schedule:
+      interval: "weekly"
+      day: "saturday"
+      time: "01:30"
+      timezone: "Europe/Stockholm"
+    groups:
+      docker-compose-patch-minor:
+        update-types: ["minor", "patch"]
