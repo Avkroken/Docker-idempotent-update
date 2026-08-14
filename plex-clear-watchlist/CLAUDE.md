@@ -31,3 +31,24 @@ docker-compose.yml
 - `PLEX_TOKEN` is always provided via environment variable — never hardcoded
 - `--dry-run` must be safe to run without side effects
 - Keep the script simple and single-purpose
+
+## Allowed
+- Committa på dev
+- Modify code
+- Run tests
+- Open PRs
+
+## Forbidden
+- Push directly to main/master
+- Merge PRs
+- Skapa eller ta bort grenar (rulesetet blockerar det)
+- Disable workflows
+- Modify secrets
+- Change GitHub org settings
+
+## Requirements
+- All tests must pass
+- Keep PRs focused
+- Never include unrelated changes
+- Never commit credentials
+- Never force push
