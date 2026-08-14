@@ -33,3 +33,24 @@ msmtprc.template
   per the rule above) — best-effort, opens a `@claude`-tagged GitHub issue
   with secrets/emails/paths redacted if `GITHUB_ERROR_REPORT_TOKEN` is
   set, no-ops otherwise
+
+## Allowed
+- Committa på dev
+- Modify code
+- Run tests
+- Open PRs
+
+## Forbidden
+- Push directly to main/master
+- Merge PRs
+- Skapa eller ta bort grenar (rulesetet blockerar det)
+- Disable workflows
+- Modify secrets
+- Change GitHub org settings
+
+## Requirements
+- All tests must pass
+- Keep PRs focused
+- Never include unrelated changes
+- Never commit credentials
+- Never force push
