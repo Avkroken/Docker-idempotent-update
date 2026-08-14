@@ -1,0 +1,18 @@
+ci:
+  - changed-files:
+    - any-glob-to-any-file: '.github/**'
+
+data:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**.json'
+      - '**.csv'
+
+documentation:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**.md'
+
+dependencies:
+  - changed-files:
+    - any-glob-to-any-file: '**/requirements*.txt'

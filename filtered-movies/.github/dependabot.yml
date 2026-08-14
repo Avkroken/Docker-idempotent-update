@@ -1,0 +1,25 @@
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    assignees: ["blixten85"]
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "friday"
+      time: "00:00"
+      timezone: "Europe/Stockholm"
+    groups:
+      pip-patch-minor:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "github-actions"
+    assignees: ["blixten85"]
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "friday"
+      time: "01:00"
+      timezone: "Europe/Stockholm"
+    groups:
+      actions-patch-minor:
+        update-types: ["minor", "patch"]

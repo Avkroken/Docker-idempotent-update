@@ -1,0 +1,66 @@
+name: Update Filtered Movies
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      # Kortlivad token från GitHub-appen "denied.se CI" i stället för en
+      - name: Prägla apptoken
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
+        with:
+          app-id: ${{ vars.CI_APP_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+      # GITHUB_TOKEN triggar aldrig andra workflows (ci.yml:s required
+      # repository-checks-jobb), så auto-merge fastnar i BLOCKED för evigt.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7
+        with:
+          python-version: '3.14.6'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run movie filter script
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+        run: python3 filter_movies.py
+
+      # INTE "[skip ci]" i commit-meddelandet nedan: det hoppar över ALLA
+      # workflows för pushen, inklusive ci.yml:s obligatoriska
+      # repository-checks-jobb på PR:en som skapas — en obligatorisk check
+      # som medvetet aldrig körs blockerar merge permanent, precis som
+      # GITHUB_TOKEN-problemet ovan gjorde (2026-07-08, 5 PR:ar hade
+      # hopat sig i BLOCKED av just den här anledningen).
+      - name: Commit and push if changed
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          git config user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
+          git config user.email '${{ steps.app-token.outputs.installation-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com'
+          git add filtered_movies_radarr.json || true
+          if ! git diff --cached --quiet; then
+            BRANCH="claude/update-movies-${GITHUB_RUN_ID}"
+            git checkout -b "$BRANCH"
+            git commit -m "Update filtered movies"
+            git push origin "$BRANCH"
+            PR_URL=$(gh pr create --title "Update filtered movies $(date +%Y-%m-%d)" \
+              --body "Automated daily TMDB update." \
+              --base main --head "$BRANCH")
+            gh pr merge --auto --squash --delete-branch "$PR_URL"
+          else
+            echo "No changes to commit"
+          fi
