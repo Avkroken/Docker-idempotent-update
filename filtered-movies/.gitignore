@@ -1,7 +1,0 @@
-# Filtered-movies-specifikt. Allt generellt (Python, venv, editorer, hemligheter)
-# ligger i .gitignore i roten.
-
-# Skriptens utdata. De två Radarr/Sonarr-filerna committas medvetet — workflowen
-# uppdaterar dem och konsumenterna hämtar dem råa från repot.
-filtered_movies.json
-filtered_tv_shows.json

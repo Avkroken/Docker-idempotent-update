@@ -10,7 +10,6 @@ var sitt repo:
 | Katalog | Vad |
 | --- | --- |
 | roten | Daglig underhållskörning av en Docker-värd (uppdatering och backup) |
-| `filtered-movies/` | Dagligen uppdaterade Radarr-/Sonarr-listor från TMDb |
 | `plex-clear-watchlist/` | Tömmer Plex-watchlistan via Plex API |
 
 Ingen av dem har någon produktionsyta — allt är cron eller container mot den

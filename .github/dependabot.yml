@@ -12,12 +12,11 @@ updates:
       actions-patch-minor:
         update-types: ["minor", "patch"]
 
-  # requirements.txt finns i filtered-movies/ och plex-clear-watchlist/.
-  # Roten har inga pip-beroenden — src/ kör på standardbiblioteket.
+  # requirements.txt finns i plex-clear-watchlist/. Roten har inga
+  # pip-beroenden — src/ kör på standardbiblioteket.
   - package-ecosystem: "pip"
     assignees: ["blixten85"]
     directories:
-      - "/filtered-movies"
       - "/plex-clear-watchlist"
     schedule:
       interval: "weekly"
