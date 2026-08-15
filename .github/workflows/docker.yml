@@ -1,7 +1,8 @@
 name: Docker
 
-# Bygger plex-clear-watchlist-imagen, skannar den med Trivy och publicerar
-# först om skanningen är ren.
+# Bygger plex-clear-watchlist-imagen, publicerar den och skannar den med
+# Trivy. Skanningen rapporterar till code scanning men fäller inte bygget —
+# se .github/actions/trivy.
 
 on:
   push:
@@ -46,30 +47,16 @@ jobs:
             ghcr.io/blixten85/plex-clear-watchlist:latest
             ghcr.io/blixten85/plex-clear-watchlist:sha-${{ steps.sha.outputs.short }}
 
-      # Bilden byggs lokalt och publiceras först efter godkänd skanning —
-      # annars vore grinden verkningslös: den vore redan ute när Trivy fäller.
-      - name: Trivy — skanna byggd image
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+      # Skanningen bor i .github/actions/trivy, en fil per verktyg. Imagen
+      # byggs lokalt (load: true) så den finns att skanna även på PR:er, där
+      # inget publiceras.
+      - name: Trivy
+        uses: ./.github/actions/trivy
         with:
-          scan-type: image
           image-ref: ghcr.io/blixten85/plex-clear-watchlist:sha-${{ steps.sha.outputs.short }}
-          format: sarif
-          output: trivy-results.sarif
-          # ignore-unfixed är brusfiltret: det som saknar patch faller bort.
-          ignore-unfixed: true
-          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
-          limit-severities-for-sarif: true
-          exit-code: '1'
-
-      # always() så fynden når code scanning även när steget ovan fällde bygget.
-      - name: Ladda upp Trivy-resultat
-        uses: github/codeql-action/upload-sarif@18420e3271f74589575af831a523c833acda327f # codeql-bundle-v2.26.2
-        if: always()
-        with:
-          sarif_file: trivy-results.sarif
           category: trivy-plex-clear-watchlist
 
-      - name: Publicera imagen (först efter godkänd skanning)
+      - name: Publicera imagen
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
         run: |
           docker push ghcr.io/blixten85/plex-clear-watchlist:latest
