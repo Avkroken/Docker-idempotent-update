@@ -16,6 +16,16 @@ Ingen av dem har någon produktionsyta — allt är cron eller container mot den
 egna hårdvaran, med samma slags automation. Tre repon gav tre uppsättningar
 workflows och regler för det.
 
+## Versioner
+
+Beroenden och basimager hålls **flytande**, inte pinnade. `debian:stable-slim`
+följer Debians nuvarande stable; `trixie-slim` gjorde det inte, och en pinnad
+digest ovanpå frös även säkerhetsuppdateringarna.
+
+Enda undantaget är GitHub Actions, som pinnas till commit-SHA — en tagg kan
+pekas om till annan kod, en SHA kan det inte. Se `AGENTS.md` för regeln i sin
+helhet.
+
 ## Docker-värdunderhåll (roten)
 
 Daily Docker host maintenance in a single container. Run **either or both** of:
