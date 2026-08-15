@@ -34,6 +34,28 @@ msmtprc.template
   with secrets/emails/paths redacted if `GITHUB_ERROR_REPORT_TOKEN` is
   set, no-ops otherwise
 
+## Versioner: flytande som standard
+
+Pinna aldrig ett versionsnummer, en release-flavor eller en digest om det inte
+är ett absolut måste. En pinne som ingen revideras sitter kvar långt efter att
+den blivit fel: `debian:trixie-slim` följer inte Debians nästa stable, och en
+basimage vars OS-generation ligger i taggnamnet kan Dependabot aldrig flytta —
+den bumpar bara siffran inom samma taggfamilj.
+
+Gäller basimager, pip- och npm-beroenden, och allt annat med en version.
+
+**Om en pinne ändå är nödvändig** ska den dokumenteras på plats, i den här
+filen och i README — med vad som är pinnat, varför, och vad som måste
+kontrolleras för att kunna släppa den igen. En odokumenterad pinne är en bugg
+som väntar.
+
+### Nuvarande undantag
+
+- **GitHub Actions pinnas till commit-SHA.** En tagg som `@v4` är föränderlig
+  och kan pekas om till annan kod; en SHA kan den inte. Det är en
+  leverantörskedjekontroll, inte versionshantering, och Dependabot bumpar dem
+  ändå automatiskt.
+
 ## Allowed
 - Committa på dev
 - Modify code
