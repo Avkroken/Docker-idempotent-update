@@ -218,38 +218,31 @@ assert_yaml_field "$CI" "str(len(data['jobs']['docker']['steps']))" "2" \
     "ci.yml: docker job has exactly 2 steps"
 
 # ---------------------------------------------------------------------------
-echo "=== AGENTS.md: required sections and rules ==="
+echo "=== AGENTS.md: obligatoriska avsnitt och regler ==="
 
 AGENTS="$REPO_ROOT/AGENTS.md"
 
-assert_contains "$AGENTS" "## Allowed" "AGENTS.md: has 'Allowed' section"
-assert_contains "$AGENTS" "## Forbidden" "AGENTS.md: has 'Forbidden' section"
-assert_contains "$AGENTS" "## Requirements" "AGENTS.md: has 'Requirements' section"
+assert_contains "$AGENTS" "## Tillåtet" "AGENTS.md: har avsnittet Tillåtet"
+assert_contains "$AGENTS" "## Förbjudet" "AGENTS.md: har avsnittet Förbjudet"
+assert_contains "$AGENTS" "## Krav" "AGENTS.md: har avsnittet Krav"
 
-# Allowed actions
-assert_contains "$AGENTS" "Create branches" "AGENTS.md: 'Create branches' is allowed"
-assert_contains "$AGENTS" "Modify code" "AGENTS.md: 'Modify code' is allowed"
-assert_contains "$AGENTS" "Run tests" "AGENTS.md: 'Run tests' is allowed"
-assert_contains "$AGENTS" "Open PRs" "AGENTS.md: 'Open PRs' is allowed"
+assert_contains "$AGENTS" "Ändra kod" "AGENTS.md: tillåter kodändringar"
+assert_contains "$AGENTS" "Köra tester" "AGENTS.md: tillåter tester"
+assert_contains "$AGENTS" "Öppna ändringsförslag från `dev`" "AGENTS.md: använder dev som ändringsgren"
 
-# Forbidden actions — most important safety rules
-assert_contains "$AGENTS" "Push directly to main/master" "AGENTS.md: forbids pushing to main/master"
-assert_contains "$AGENTS" "Merge PRs" "AGENTS.md: forbids merging PRs"
-assert_contains "$AGENTS" "Delete branches" "AGENTS.md: forbids deleting branches"
-assert_contains "$AGENTS" "Disable workflows" "AGENTS.md: forbids disabling workflows"
-assert_contains "$AGENTS" "Modify secrets" "AGENTS.md: forbids modifying secrets"
-assert_contains "$AGENTS" "Change GitHub org settings" "AGENTS.md: forbids changing GitHub org settings"
+assert_contains "$AGENTS" "Skicka ändringar direkt till `main` eller `master`" "AGENTS.md: förbjuder direktändringar på standardgrenen"
+assert_contains "$AGENTS" "Radera grenar" "AGENTS.md: förbjuder radering av grenar"
+assert_contains "$AGENTS" "Stänga av arbetsflöden" "AGENTS.md: förbjuder avstängda arbetsflöden"
+assert_contains "$AGENTS" "Ändra hemligheter" "AGENTS.md: förbjuder ändringar av hemligheter"
 
-# Requirements
-assert_contains "$AGENTS" "All tests must pass" "AGENTS.md: requires all tests pass"
-assert_contains "$AGENTS" "Never commit credentials" "AGENTS.md: requires never commit credentials"
-assert_contains "$AGENTS" "Never force push" "AGENTS.md: requires never force push"
-assert_contains "$AGENTS" "Keep PRs focused" "AGENTS.md: requires PRs be focused"
-assert_contains "$AGENTS" "Never include unrelated changes" "AGENTS.md: requires no unrelated changes"
+assert_contains "$AGENTS" "Alla tester måste godkännas" "AGENTS.md: kräver godkända tester"
+assert_contains "$AGENTS" "Starta inte en ny koduppgift medan ett ändringsförslag från `dev` är öppet" "AGENTS.md: serialiserar arbetet på dev"
+assert_contains "$AGENTS" "automatisk sammanfogning med en metod som tillåts" "AGENTS.md: kräver tillåten automatisk sammanfogning"
+assert_contains "$AGENTS" "Ta aldrig med orelaterade ändringar" "AGENTS.md: förbjuder orelaterade ändringar"
+assert_contains "$AGENTS" "Tvinga aldrig igenom en skickning" "AGENTS.md: förbjuder tvingad skickning"
 
-# Regression: old verbose content (branch prefixes, ownership map) is NOT present
-assert_not_contains "$AGENTS" "claude/" "AGENTS.md: no agent-specific branch prefix table"
-assert_not_contains "$AGENTS" "Ownership Map" "AGENTS.md: no ownership map section"
+assert_not_contains "$AGENTS" "claude/" "AGENTS.md: saknar agentspecifika grennamn"
+assert_not_contains "$AGENTS" "Ownership Map" "AGENTS.md: saknar ägarkarta"
 
 # ---------------------------------------------------------------------------
 echo "=== CLAUDE.md: required sections and conventions ==="
