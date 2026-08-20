@@ -4,11 +4,15 @@ name: Docker
 # Trivy. Workflowet startar alltid på PR så ett eventuellt required checknamn
 # kan rapporteras, men det dyra Docker-jobbet körs bara när image-contexten,
 # Trivy-actionen eller workflowet självt faktiskt påverkas.
+# En schemalagd körning bygger imagen på nytt för att hitta nya CVE:er även när
+# repositoryt inte har ändrats.
 
 on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: '0 6 * * 1' # måndagar 06:00 UTC
   workflow_dispatch:
 
 concurrency:
@@ -36,7 +40,7 @@ jobs:
         run: |
           set -euo pipefail
           run=true
-          if [[ "${{ github.event_name }}" != "workflow_dispatch" && -n "$BASE_SHA" && ! "$BASE_SHA" =~ ^0+$ ]]; then
+          if [[ "${{ github.event_name }}" != "workflow_dispatch" && "${{ github.event_name }}" != "schedule" && -n "$BASE_SHA" && ! "$BASE_SHA" =~ ^0+$ ]]; then
             run=false
             while IFS= read -r file; do
               case "$file" in
