@@ -72,11 +72,12 @@ som väntar.
 - Överlämna kodändringar endast på `dev`
 - Alla tester måste godkännas
 - Håll varje ändringsförslag avgränsat till en uppgift
+- Starta inte en ny koduppgift medan ett ändringsförslag från `dev` är öppet; slutför eller stäng det först
 - Ta aldrig med orelaterade ändringar
 - Överlämna aldrig inloggningsuppgifter eller andra hemligheter till versionshistoriken
 - Tvinga aldrig igenom en skickning
 - Skapa ändringsförslag som klara för granskning, aldrig som utkast
-- Aktivera automatisk sammanfogning med en sammanfogningsöverlämning direkt efter att ändringsförslaget skapats
+- Aktivera automatisk sammanfogning med en metod som tillåts av förrådets regler direkt efter att ändringsförslaget skapats
 - Automatisk sammanfogning får slutföras först när alla regelkrav och kontrollkörningar har godkänts
 - Om automatisk sammanfogning inte kan aktiveras: rapportera det exakta felet
 
