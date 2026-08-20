@@ -50,3 +50,5 @@ runs:
       with:
         sarif_file: trivy-results.sarif
         category: ${{ inputs.category }}
+        ref: ${{ github.event_name == 'pull_request' && format('refs/pull/{0}/head', github.event.pull_request.number) || github.ref }}
+        sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
