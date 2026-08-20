@@ -199,8 +199,8 @@ assert_yaml_field "$CI" "data['permissions']['contents']" "read" \
 assert_yaml_field "$CI" "str('docker' in data['jobs'])" "True" \
     "ci.yml: 'docker' job is defined"
 
-assert_yaml_field "$CI" "data['jobs']['docker']['runs-on']" "ubuntu-26.04" \
-    "ci.yml: docker job runs on ubuntu-26.04"
+assert_yaml_field "$CI" "data['jobs']['docker']['runs-on']" "ubuntu-latest" \
+    "ci.yml: docker job runs on ubuntu-latest"
 
 # Steps: checkout action and docker build
 assert_yaml_field "$CI" \
