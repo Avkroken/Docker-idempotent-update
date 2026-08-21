@@ -3,6 +3,8 @@ name: Docker build & Trivy
 # Startar Docker-jobbet direkt på PR och avgör påverkan på samma runner innan
 # det dyra bygget. Då slipper vi ett separat impact-jobb som måste avslutas och
 # en ny runner köas innan Docker-builden ens kan börja.
+# På PR:er där Docker inte påverkas laddas ett tomt Trivy-SARIF upp så GitHubs
+# Code Scanning merge protection ändå får en analys för aktuell PR-head.
 # En schemalagd körning bygger imagen på nytt för att hitta nya CVE:er även när
 # repositoryt inte har ändrats.
 
@@ -83,6 +85,24 @@ jobs:
         uses: ./.github/actions/trivy
         with:
           image-ref: ghcr.io/blixten85/plex-clear-watchlist:sha-${{ steps.sha.outputs.short }}
+          category: trivy-plex-clear-watchlist
+
+      - name: Skapa tomt Trivy-resultat för opåverkad Docker
+        if: github.event_name == 'pull_request' && steps.impact.outputs.docker != 'true'
+        run: |
+          cat > trivy-empty.sarif <<'EOF'
+          {
+            "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+            "version": "2.1.0",
+            "runs": [{"tool":{"driver":{"name":"Trivy","rules":[]}},"results":[]}]
+          }
+          EOF
+
+      - name: Ladda upp tomt Trivy-resultat
+        if: github.event_name == 'pull_request' && steps.impact.outputs.docker != 'true'
+        uses: github/codeql-action/upload-sarif@18420e3271f74589575af831a523c833acda327f # codeql-bundle-v2.26.2
+        with:
+          sarif_file: trivy-empty.sarif
           category: trivy-plex-clear-watchlist
 
       - name: Publicera imagen
