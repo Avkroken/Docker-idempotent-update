@@ -1,4 +1,4 @@
-name: Docker
+name: Docker build & Trivy
 
 # Bygger plex-clear-watchlist-imagen, publicerar den och skannar den med
 # Trivy. Workflowet startar alltid på PR så ett eventuellt required checknamn
