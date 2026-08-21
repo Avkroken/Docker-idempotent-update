@@ -1,9 +1,8 @@
-name: Docker
+name: Docker build & Trivy
 
-# Bygger plex-clear-watchlist-imagen, publicerar den och skannar den med
-# Trivy. Workflowet startar alltid på PR så ett eventuellt required checknamn
-# kan rapporteras, men det dyra Docker-jobbet körs bara när image-contexten,
-# Trivy-actionen eller workflowet självt faktiskt påverkas.
+# Startar Docker-jobbet direkt på PR och avgör påverkan på samma runner innan
+# det dyra bygget. Då slipper vi ett separat impact-jobb som måste avslutas och
+# en ny runner köas innan Docker-builden ens kan börja.
 # En schemalagd körning bygger imagen på nytt för att hitta nya CVE:er även när
 # repositoryt inte har ändrats.
 
@@ -23,15 +22,18 @@ permissions:
   contents: read
 
 jobs:
-  impact:
+  docker:
     runs-on: ubuntu-latest
-    outputs:
-      docker: ${{ steps.impact.outputs.docker }}
+    permissions:
+      contents: read
+      packages: write
+      security-events: write # Trivy-resultat till code scanning
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           persist-credentials: false
+
       - name: Bestäm Docker-påverkan
         id: impact
         env:
@@ -54,21 +56,8 @@ jobs:
           echo "docker=$run" >> "$GITHUB_OUTPUT"
           echo "Docker impact: $run"
 
-  docker:
-    needs: impact
-    if: ${{ needs.impact.outputs.docker == 'true' }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      security-events: write # Trivy-resultat till code scanning
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-
       - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+        if: steps.impact.outputs.docker == 'true' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch')
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -76,9 +65,11 @@ jobs:
 
       - name: Short SHA
         id: sha
+        if: steps.impact.outputs.docker == 'true'
         run: echo "short=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
 
       - uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        if: steps.impact.outputs.docker == 'true'
         with:
           context: plex-clear-watchlist
           push: false
@@ -88,13 +79,18 @@ jobs:
             ghcr.io/blixten85/plex-clear-watchlist:sha-${{ steps.sha.outputs.short }}
 
       - name: Trivy
+        if: steps.impact.outputs.docker == 'true'
         uses: ./.github/actions/trivy
         with:
           image-ref: ghcr.io/blixten85/plex-clear-watchlist:sha-${{ steps.sha.outputs.short }}
           category: trivy-plex-clear-watchlist
 
       - name: Publicera imagen
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+        if: steps.impact.outputs.docker == 'true' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch')
         run: |
           docker push ghcr.io/blixten85/plex-clear-watchlist:latest
           docker push ghcr.io/blixten85/plex-clear-watchlist:sha-${{ steps.sha.outputs.short }}
+
+      - name: Hoppa över opåverkad Docker-build
+        if: steps.impact.outputs.docker != 'true'
+        run: echo "Docker-contexten påverkas inte; inget imagebygge behövs."

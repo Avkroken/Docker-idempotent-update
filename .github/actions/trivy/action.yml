@@ -44,11 +44,11 @@ runs:
         exit-code: '0'
 
     # always() så fynden når code scanning även om skanningssteget avbryts.
+    # Låt upload-sarif använda workflowets normala GITHUB_REF/GITHUB_SHA för
+    # pull_request, så Code Scanning associerar resultatet med GitHubs PR-ref.
     - name: Ladda upp resultatet
       uses: github/codeql-action/upload-sarif@18420e3271f74589575af831a523c833acda327f # codeql-bundle-v2.26.2
       if: always()
       with:
         sarif_file: trivy-results.sarif
         category: ${{ inputs.category }}
-        ref: ${{ github.event_name == 'pull_request' && format('refs/pull/{0}/head', github.event.pull_request.number) || github.ref }}
-        sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
