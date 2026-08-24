@@ -1,9 +1,9 @@
 # CI och branchflöde
 
-Repositoryt använder endast `dev` och `main`. Arbete görs på `dev`, PR går `dev → main`, och efter merge fast-forwardar `.github/workflows/sync-dev.yml` automatiskt `dev` till `main` utan force-push. Om `dev` innehåller omergat arbete ska synken avbryta.
+`main` är den enda långlivade arbetsgrenen. Varje ändring görs på en kortlivad branch och går via PR till `main`. Auto-merge används inte; färdiga PR:er squash-mergas.
 
-Vanlig CI ska inte verifiera samma arbetscommit både som `push` till `dev` och `pull_request`. PR-CI körs på PR; push-verifiering/publicering körs på `main`.
+PR-CI körs på `pull_request`. Push-verifiering, publicering och schemalagda kontroller körs där de behövs på `main`; samma arbetscommit ska inte få onödig dubbel-CI.
 
-Repot är huvudsakligen Python med separata Docker-/paketeringsdelar. Därför används inte en generell fler-språksmotor. Python lint/test behåller stabila required check-namn, medan Docker/paketeringsjobb får fil-/komponentfilter där beroendet är tydligt. Required checks får inte filtreras bort på workflow-nivå om det kan lämna dem i `Expected/Pending`.
+Repot är huvudsakligen Python med separata Docker-/paketeringsdelar. Python lint/test behåller stabila required check-namn. Docker- och paketeringsjobb filtrerar påverkan där det är säkert, medan required checks inte filtreras bort på workflow-nivå om det kan lämna dem i `Expected/Pending`.
 
-Code Scanning-identiteter ska vara stabila över namnbyten. Dokumentation/processmetadata ska inte starta dyr Docker-/paketerings-CI, medan okänd kod/config ska fail-open till mer verifiering.
+Code Scanning-identiteter ska vara stabila. Dokumentation/processmetadata ska inte starta dyr Docker-CI, medan okänd kod/config ska fail-open till mer verifiering.
