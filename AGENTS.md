@@ -16,15 +16,23 @@ Undvik versionspinnar om de inte behövs. Nödvändiga pinnar ska dokumenteras m
 
 ## GitHub-arbetsflöde
 
-Arbete sker i en **sluten pool av tre grenar**: `dev/1`, `dev/2`, `dev/3`.
+Arbete sker i en **sluten pool av tre grenar**, en per arbetstyp:
+
+| Slot | För |
+| --- | --- |
+| `work/feature` | ny funktionalitet |
+| `work/fix` | buggfixar och CI-problem |
+| `work/chore` | dokumentation, städning, konfiguration |
+
 `main` tar bara emot squash-mergade PR:er som passerat gröna checkar.
 
 **Skapa aldrig egna grenar.** Rulesetet blockerar det — en push som försöker
 skapa något utanför poolen avvisas. Poolen finns för att grenar som skapas per
 uppgift blir liggande halvfärdiga.
 
-1. Välj en ledig slot. Ligger det omergat arbete i en slot, **slutför det först**
-   i stället för att börja något nytt i en annan.
+1. Välj sloten som matchar arbetet. Är den upptagen duger vilken ledig som helst —
+   namnen är vägledning, inte en spärr. Ligger det omergat arbete i en slot,
+   **slutför det först** i stället för att börja något nytt i en annan.
 2. Kör relevanta tester före push; för containerändringar verifiera med Docker/Compose när det är praktiskt.
 3. Pusha till sloten och öppna PR från den till `main` som klar för granskning.
    Aktivera auto-merge — merge-kön tar PR:n så snart required checks är gröna.
