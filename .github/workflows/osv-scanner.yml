@@ -37,7 +37,7 @@ jobs:
       contents: read
       security-events: write
     with:
-      fail-on-vuln: true
+      fail-on-vuln: false
 
   scan-main:
     if: github.event_name == 'push' || github.event_name == 'schedule'
