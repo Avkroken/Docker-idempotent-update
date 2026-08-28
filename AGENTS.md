@@ -24,29 +24,22 @@ Arbete sker i en **sluten pool av tre grenar**, en per arbetstyp:
 | `work/fix` | buggfixar och CI-problem |
 | `work/chore` | dokumentation, städning, konfiguration |
 
-`main` tar bara emot squash-mergade PR:er som passerat gröna checkar.
+`main` tar bara emot squash-mergade PR:er som passerat alla merge-gates.
 
-**Skapa aldrig egna grenar.** Rulesetet blockerar det — en push som försöker
-skapa något utanför poolen avvisas. Poolen finns för att grenar som skapas per
-uppgift blir liggande halvfärdiga.
+**Skapa aldrig egna grenar.** Rulesetet blockerar det. Välj lämplig ledig slot och slutför omergat arbete innan nytt parallellt arbete startas.
 
-1. Välj sloten som matchar arbetet. Är den upptagen duger vilken ledig som helst —
-   namnen är vägledning, inte en spärr. Ligger det omergat arbete i en slot,
-   **slutför det först** i stället för att börja något nytt i en annan.
-2. Kör relevanta tester före push; för containerändringar verifiera med Docker/Compose när det är praktiskt.
-3. Pusha till sloten och öppna PR från den till `main` som klar för granskning.
-   Aktivera auto-merge — merge-kön tar PR:n så snart required checks är gröna.
-4. Lös CI- och reviewproblem i samma slot; PR:n uppdateras av varje push.
-5. **Squash merge är den enda tillåtna merge-metoden.** Efter merge rebasar
-   `.github/workflows/sync-pool.yml` varje slot på `main`.
+1. Kör relevanta tester före push; för containerändringar verifiera med Docker/Compose när det är praktiskt.
+2. Pusha till sloten och öppna PR till `main` som klar för granskning.
+3. **Aktivera auto-merge omedelbart efter att PR:n skapats**, även medan CI eller review fortfarande pågår.
+4. Required CI-checkar och olösta review-trådar är merge-blockerare. Läs och utvärdera alltid alla review-kommentarer; relevanta fynd åtgärdas i samma PR. Markera inte en tråd resolved förrän den är utvärderad och eventuell fix är pushad.
+5. Efter varje ny commit, kontrollera CI och review-status igen. När required checks är gröna och alla review-trådar är resolved ska den redan armerade auto-merge-funktionen föra PR:n vidare. Om den inte gör det, identifiera exakt kvarvarande blockerare. **Squash merge är den enda tillåtna merge-metoden.**
 
-Skicka aldrig direkt till `main`, kringgå inte branch protection/rulesets och ändra
-inte hemligheter eller organisationsinställningar utan uttrycklig instruktion.
+Efter merge rebasar `.github/workflows/sync-pool.yml` varje slot på `main`.
+
+Skicka aldrig direkt till `main`, kringgå inte branch protection/rulesets och ändra inte hemligheter eller organisationsinställningar utan uttrycklig instruktion.
 
 ## Svarsformat
 
 **[SKILLS.md](SKILLS.md) styr allt svarsformat. Läs den och följ den i varje svar.**
 
-SKILLS.md har företräde framför den här filen och framför varje annan
-formuleringsanvisning i repot. Sammanfatta den inte, återge den inte i kortform
-och väg den inte mot andra skrivelser — det är den filen som gäller.
+SKILLS.md har företräde framför den här filen och framför varje annan formuleringsanvisning i repot. Sammanfatta den inte, återge den inte i kortform och väg den inte mot andra skrivelser — det är den filen som gäller.
