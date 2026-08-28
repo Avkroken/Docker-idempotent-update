@@ -16,27 +16,19 @@ Undvik versionspinnar om de inte behövs. Nödvändiga pinnar ska dokumenteras m
 
 ## GitHub-arbetsflöde
 
-Arbete sker i en **sluten pool av tre grenar**, en per arbetstyp:
-
-| Slot | För |
-| --- | --- |
-| `work/feature` | ny funktionalitet |
-| `work/fix` | buggfixar och CI-problem |
-| `work/chore` | dokumentation, städning, konfiguration |
-
-`main` tar bara emot squash-mergade PR:er som passerat alla merge-gates.
-
-**Skapa aldrig egna grenar.** Rulesetet blockerar det. Välj lämplig ledig slot och slutför omergat arbete innan nytt parallellt arbete startas.
+Arbete sker via tillfälliga arbetsgrenar och pull requests till `main`. Arbetsgrenar får använda repo- eller agentvalda namn som `claude/*`, `codex/*`, `feature/*`, `fix/*` eller motsvarande; de återanvändbara `work/feature`, `work/fix` och `work/chore` får fortfarande användas men är inte obligatoriska.
 
 1. Kör relevanta tester före push; för containerändringar verifiera med Docker/Compose när det är praktiskt.
-2. Pusha till sloten och öppna PR till `main` som klar för granskning.
+2. Pusha arbetsgrenen och öppna en ready PR till `main`.
 3. **Aktivera auto-merge omedelbart efter att PR:n skapats**, även medan CI eller review fortfarande pågår.
 4. Required CI-checkar och olösta review-trådar är merge-blockerare. Läs och utvärdera alltid alla review-kommentarer; relevanta fynd åtgärdas i samma PR. Markera inte en tråd resolved förrän den är utvärderad och eventuell fix är pushad.
 5. Efter varje ny commit, kontrollera CI och review-status igen. När required checks är gröna och alla review-trådar är resolved ska den redan armerade auto-merge-funktionen föra PR:n vidare. Om den inte gör det, identifiera exakt kvarvarande blockerare. **Squash merge är den enda tillåtna merge-metoden.**
 
-Efter merge rebasar `.github/workflows/sync-pool.yml` varje slot på `main`.
+`.github/workflows/pr-watchdog.yml` bevakar alla lokala branches utom `main`, merge-köns `gh-readonly-queue/*` och uttryckligen konfigurerade permanenta undantag. En branch med unika commits som har saknat öppen PR i mer än 60 minuter får en ready PR till `main` och squash auto-merge armeras. Exakt samma HEAD öppnas inte på nytt om den redan har behandlats i en stängd PR. Watchdoggen avgör inte om arbetet är önskvärt eller mergebart; CI, review och merge-gates gör det.
 
-Skicka aldrig direkt till `main`, kringgå inte branch protection/rulesets och ändra inte hemligheter eller organisationsinställningar utan uttrycklig instruktion.
+`.github/workflows/sync-pool.yml` får fortsätta synka de uttryckliga återanvändbara `work/*`-slotsen men får aldrig resetta godtyckliga agent- eller arbetsgrenar.
+
+Skicka aldrig direkt till `main`, kringgå inte branch protection/rulesets, required checks, review resolution eller merge queue och ändra inte hemligheter eller organisationsinställningar utan uttrycklig instruktion.
 
 ## Svarsformat
 
