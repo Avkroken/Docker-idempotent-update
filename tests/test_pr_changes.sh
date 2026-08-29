@@ -12,40 +12,26 @@ fail() { echo "  FAIL: $1"; FAIL=$((FAIL + 1)); }
 
 assert_contains() {
     local file="$1" pattern="$2" label="$3"
-    if grep -qF -- "$pattern" "$file"; then
-        pass "$label"
-    else
-        fail "$label (pattern not found: $pattern)"
-    fi
+    if grep -qF -- "$pattern" "$file"; then pass "$label"; else fail "$label (pattern not found: $pattern)"; fi
 }
 
 assert_not_contains() {
     local file="$1" pattern="$2" label="$3"
-    if ! grep -qF -- "$pattern" "$file"; then
-        pass "$label"
-    else
-        fail "$label (unexpected pattern found: $pattern)"
-    fi
+    if ! grep -qF -- "$pattern" "$file"; then pass "$label"; else fail "$label (unexpected pattern found: $pattern)"; fi
 }
 
 assert_yaml_field() {
     local file="$1" py_expr="$2" expected="$3" label="$4"
     actual="$(python3 -c "
-import yaml, sys
+import yaml
 data = yaml.safe_load(open('$file'))
 result = $py_expr
 print(str(result))
 " 2>/dev/null)"
-    if [ "$actual" = "$expected" ]; then
-        pass "$label"
-    else
-        fail "$label (expected '$expected', got '$actual')"
-    fi
+    if [ "$actual" = "$expected" ]; then pass "$label"; else fail "$label (expected '$expected', got '$actual')"; fi
 }
 
-# ---------------------------------------------------------------------------
 echo "=== YAML syntax validation ==="
-
 for f in \
     ".github/ISSUE_TEMPLATE/bug_report.yml" \
     ".github/ISSUE_TEMPLATE/config.yml" \
@@ -53,227 +39,104 @@ for f in \
     ".github/workflows/ci.yml"
 do
     full="$REPO_ROOT/$f"
-    if python3 -c "import yaml; yaml.safe_load(open('$full'))" 2>/dev/null; then
-        pass "$f is valid YAML"
-    else
-        fail "$f is valid YAML"
-    fi
+    if python3 -c "import yaml; yaml.safe_load(open('$full'))" 2>/dev/null; then pass "$f is valid YAML"; else fail "$f is valid YAML"; fi
 done
 
-# ---------------------------------------------------------------------------
 echo "=== bug_report.yml: GitHub issue form structure ==="
-
 BUG="$REPO_ROOT/.github/ISSUE_TEMPLATE/bug_report.yml"
-
 assert_yaml_field "$BUG" "data['name']" "Bug report" "bug_report: name is 'Bug report'"
 assert_yaml_field "$BUG" "data['title']" "bug: " "bug_report: title prefix is 'bug: '"
 assert_yaml_field "$BUG" "data['labels'][0]" "bug" "bug_report: first label is 'bug'"
-
-# body field IDs present
-assert_yaml_field "$BUG" "str([f['id'] for f in data['body'] if f.get('type')=='textarea'])" \
-    "['description', 'steps', 'expected', 'environment']" \
-    "bug_report: textarea field IDs are description, steps, expected, environment"
-
-# required fields
-assert_yaml_field "$BUG" \
-    "str([f['id'] for f in data['body'] if f.get('validations', {}).get('required')])" \
-    "['description', 'steps', 'expected']" \
-    "bug_report: required fields are description, steps, expected"
-
-# environment is NOT required (optional)
-assert_yaml_field "$BUG" \
-    "str(any(f.get('validations', {}).get('required') for f in data['body'] if f.get('id')=='environment'))" \
-    "False" \
-    "bug_report: environment field is optional (not required)"
-
-# steps placeholder contains numbered list starters
+assert_yaml_field "$BUG" "str([f['id'] for f in data['body'] if f.get('type')=='textarea'])" "['description', 'steps', 'expected', 'environment']" "bug_report: textarea field IDs are description, steps, expected, environment"
+assert_yaml_field "$BUG" "str([f['id'] for f in data['body'] if f.get('validations', {}).get('required')])" "['description', 'steps', 'expected']" "bug_report: required fields are description, steps, expected"
+assert_yaml_field "$BUG" "str(any(f.get('validations', {}).get('required') for f in data['body'] if f.get('id')=='environment'))" "False" "bug_report: environment field is optional (not required)"
 assert_contains "$BUG" "1." "bug_report: steps placeholder starts numbered list"
 
-# ---------------------------------------------------------------------------
 echo "=== config.yml: issue template config ==="
-
 CONFIG="$REPO_ROOT/.github/ISSUE_TEMPLATE/config.yml"
+assert_yaml_field "$CONFIG" "data['blank_issues_enabled']" "False" "config: blank_issues_enabled is false"
+assert_yaml_field "$CONFIG" "str(data['contact_links'])" "[]" "config: contact_links is empty list"
 
-assert_yaml_field "$CONFIG" "data['blank_issues_enabled']" "False" \
-    "config: blank_issues_enabled is false"
-assert_yaml_field "$CONFIG" "str(data['contact_links'])" "[]" \
-    "config: contact_links is empty list"
-
-# ---------------------------------------------------------------------------
 echo "=== feature_request.yml: GitHub issue form structure ==="
-
 FEAT="$REPO_ROOT/.github/ISSUE_TEMPLATE/feature_request.yml"
-
 assert_yaml_field "$FEAT" "data['name']" "Feature request" "feature_request: name is 'Feature request'"
 assert_yaml_field "$FEAT" "data['title']" "feat: " "feature_request: title prefix is 'feat: '"
 assert_yaml_field "$FEAT" "data['labels'][0]" "enhancement" "feature_request: first label is 'enhancement'"
+assert_yaml_field "$FEAT" "str([f['id'] for f in data['body'] if f.get('validations', {}).get('required')])" "['problem', 'proposal']" "feature_request: required fields are problem and proposal"
+assert_yaml_field "$FEAT" "str(any(f.get('id')=='alternatives' for f in data['body']))" "True" "feature_request: alternatives field exists"
+assert_yaml_field "$FEAT" "str(any(f.get('validations', {}).get('required') for f in data['body'] if f.get('id')=='alternatives'))" "False" "feature_request: alternatives field is optional"
 
-# required fields: problem and proposal
-assert_yaml_field "$FEAT" \
-    "str([f['id'] for f in data['body'] if f.get('validations', {}).get('required')])" \
-    "['problem', 'proposal']" \
-    "feature_request: required fields are problem and proposal"
-
-# alternatives field exists but is NOT required
-assert_yaml_field "$FEAT" \
-    "str(any(f.get('id')=='alternatives' for f in data['body']))" \
-    "True" \
-    "feature_request: alternatives field exists"
-assert_yaml_field "$FEAT" \
-    "str(any(f.get('validations', {}).get('required') for f in data['body'] if f.get('id')=='alternatives'))" \
-    "False" \
-    "feature_request: alternatives field is optional"
-
-# ---------------------------------------------------------------------------
 echo "=== pull_request_template.md: required sections and checklist ==="
-
 PRTEMPLATE="$REPO_ROOT/.github/pull_request_template.md"
-
 assert_contains "$PRTEMPLATE" "## Summary" "pr_template: has Summary section"
 assert_contains "$PRTEMPLATE" "## Testing" "pr_template: has Testing section"
 assert_contains "$PRTEMPLATE" "## Checklist" "pr_template: has Checklist section"
 assert_contains "$PRTEMPLATE" "Tests pass locally" "pr_template: has 'Tests pass locally' checklist item"
 assert_contains "$PRTEMPLATE" "PR is focused and isolated" "pr_template: has 'PR is focused and isolated' checklist item"
 assert_contains "$PRTEMPLATE" "No unrelated changes are included" "pr_template: has 'No unrelated changes' checklist item"
-assert_contains "$PRTEMPLATE" "No credentials or secrets are committed" "pr_template: has 'No credentials or secrets' checklist item"
-
-# Checklist items use GitHub markdown task list syntax
+assert_contains "$PRTEMPLATE" "No credentials or secrets are committed" "pr_template: has 'No credentials or secrets are committed' checklist item"
 assert_contains "$PRTEMPLATE" "- [ ]" "pr_template: uses unchecked task list syntax"
-
-# Summary section has a placeholder bullet
 assert_contains "$PRTEMPLATE" "-" "pr_template: Summary section has content placeholder"
 
-# ---------------------------------------------------------------------------
 echo "=== dependabot.yml: Dependabot configuration ==="
-
 DEPENDABOT="$REPO_ROOT/.github/dependabot.yml"
+if python3 -c "import yaml; yaml.safe_load(open('$DEPENDABOT'))" 2>/dev/null; then pass "dependabot.yml is valid YAML"; else fail "dependabot.yml is valid YAML"; fi
+assert_yaml_field "$DEPENDABOT" "data['version']" "2" "dependabot.yml: version is 2"
+assert_yaml_field "$DEPENDABOT" "str('github-actions' in [u['package-ecosystem'] for u in data['updates']])" "True" "dependabot.yml: github-actions ecosystem present"
+assert_yaml_field "$DEPENDABOT" "str(all('schedule' in u and 'interval' in u['schedule'] for u in data['updates']))" "True" "dependabot.yml: all updates have schedule.interval"
 
-if python3 -c "import yaml; yaml.safe_load(open('$DEPENDABOT'))" 2>/dev/null; then
-    pass "dependabot.yml is valid YAML"
-else
-    fail "dependabot.yml is valid YAML"
-fi
-
-assert_yaml_field "$DEPENDABOT" "data['version']" "2" \
-    "dependabot.yml: version is 2"
-
-assert_yaml_field "$DEPENDABOT" \
-    "str('github-actions' in [u['package-ecosystem'] for u in data['updates']])" \
-    "True" \
-    "dependabot.yml: github-actions ecosystem present"
-
-assert_yaml_field "$DEPENDABOT" \
-    "str(all('schedule' in u and 'interval' in u['schedule'] for u in data['updates']))" \
-    "True" \
-    "dependabot.yml: all updates have schedule.interval"
-
-# ---------------------------------------------------------------------------
 echo "=== ci.yml: GitHub Actions workflow structure ==="
-
 CI="$REPO_ROOT/.github/workflows/ci.yml"
-
 assert_yaml_field "$CI" "data['name']" "CI" "ci.yml: workflow name is 'CI'"
-
-# NOTE: PyYAML parses bare 'on' as boolean True, so we key on data[True].
-# Triggered on pull_request
-assert_yaml_field "$CI" "str('pull_request' in data[True])" "True" \
-    "ci.yml: triggered on pull_request"
-
-# Triggered on push to main
-assert_yaml_field "$CI" "str(data[True]['push']['branches'])" "['main']" \
-    "ci.yml: push trigger limited to main branch"
-
-# Concurrency: cancel-in-progress
-assert_yaml_field "$CI" "str(data['concurrency']['cancel-in-progress'])" "True" \
-    "ci.yml: concurrency cancel-in-progress is true"
-
-# Concurrency group references workflow and ref
+assert_yaml_field "$CI" "str('pull_request' in data[True])" "True" "ci.yml: triggered on pull_request"
+assert_yaml_field "$CI" "str(data[True]['push']['branches'])" "['main']" "ci.yml: push trigger limited to main branch"
+assert_yaml_field "$CI" "str(data['concurrency']['cancel-in-progress'])" "True" "ci.yml: concurrency cancel-in-progress is true"
 assert_contains "$CI" "github.workflow" "ci.yml: concurrency group uses github.workflow"
 assert_contains "$CI" "github.ref" "ci.yml: concurrency group uses github.ref"
+assert_yaml_field "$CI" "data['permissions']['contents']" "read" "ci.yml: permissions.contents is 'read'"
+assert_yaml_field "$CI" "str('docker' in data['jobs'])" "True" "ci.yml: 'docker' job is defined"
+assert_yaml_field "$CI" "data['jobs']['docker']['runs-on']" "ubuntu-latest" "ci.yml: docker job runs on ubuntu-latest"
+assert_yaml_field "$CI" "str(any('actions/checkout' in str(s.get('uses','')) for s in data['jobs']['docker']['steps']))" "True" "ci.yml: docker job uses actions/checkout"
+assert_yaml_field "$CI" "str(any('docker build' in str(s.get('run','')) for s in data['jobs']['docker']['steps']))" "True" "ci.yml: docker job runs docker build"
+assert_yaml_field "$CI" "str(len(data['jobs']['docker']['steps']))" "2" "ci.yml: docker job has exactly 2 steps"
 
-# Permissions: contents: read (least-privilege)
-assert_yaml_field "$CI" "data['permissions']['contents']" "read" \
-    "ci.yml: permissions.contents is 'read'"
-
-# jobs: docker job exists
-assert_yaml_field "$CI" "str('docker' in data['jobs'])" "True" \
-    "ci.yml: 'docker' job is defined"
-
-assert_yaml_field "$CI" "data['jobs']['docker']['runs-on']" "ubuntu-latest" \
-    "ci.yml: docker job runs on ubuntu-latest"
-
-# Steps: checkout action and docker build
-assert_yaml_field "$CI" \
-    "str(any('actions/checkout' in str(s.get('uses','')) for s in data['jobs']['docker']['steps']))" \
-    "True" \
-    "ci.yml: docker job uses actions/checkout"
-
-assert_yaml_field "$CI" \
-    "str(any('docker build' in str(s.get('run','')) for s in data['jobs']['docker']['steps']))" \
-    "True" \
-    "ci.yml: docker job runs docker build"
-
-# Exactly 2 steps: checkout + docker build
-assert_yaml_field "$CI" "str(len(data['jobs']['docker']['steps']))" "2" \
-    "ci.yml: docker job has exactly 2 steps"
-
-# ---------------------------------------------------------------------------
-echo "=== AGENTS.md: obligatoriska avsnitt och regler ==="
-
+echo "=== AGENTS.md: authoritative managed policy ==="
 AGENTS="$REPO_ROOT/AGENTS.md"
+PLEX_AGENTS="$REPO_ROOT/plex-clear-watchlist/AGENTS.md"
+assert_contains "$AGENTS" "<!-- AVKROKEN-COMMON:START -->" "AGENTS.md: has managed common start marker"
+assert_contains "$AGENTS" "<!-- AVKROKEN-COMMON:END -->" "AGENTS.md: has managed common end marker"
+assert_contains "$AGENTS" "## Pre-PR quality gate" "AGENTS.md: has pre-PR quality gate"
+assert_contains "$AGENTS" "## Review-signal" "AGENTS.md: has review signal policy"
+assert_contains "$AGENTS" "## Pull request och merge" "AGENTS.md: has pull request and merge policy"
+assert_contains "$AGENTS" "Pusha aldrig direkt till `main`" "AGENTS.md: forbids direct pushes to main"
+assert_contains "$AGENTS" "required checks/CI" "AGENTS.md: requires CI gate verification"
+assert_contains "$AGENTS" "review-trådar" "AGENTS.md: requires review-thread verification"
+assert_contains "$AGENTS" "Repositoryts aktuella ruleset" "AGENTS.md: live configuration selects merge method"
+assert_contains "$AGENTS" "OPENAI_API_KEY" "AGENTS.md: protects external AI provider credentials"
+assert_not_contains "$AGENTS" "MERGE_POLICY.md" "AGENTS.md: does not depend on a parallel merge policy file"
 
-assert_contains "$AGENTS" "## Tillåtet" "AGENTS.md: har avsnittet Tillåtet"
-assert_contains "$AGENTS" "## Förbjudet" "AGENTS.md: har avsnittet Förbjudet"
-assert_contains "$AGENTS" "## Krav" "AGENTS.md: har avsnittet Krav"
+assert_contains "$PLEX_AGENTS" "Repositoryövergripande arbets-, review-, säkerhets-, eskalerings- och mergepolicy finns i `/AGENTS.md`" "plex AGENTS: points to root policy"
+assert_contains "$PLEX_AGENTS" "Kodändringar för detta subtree överlämnas på `dev`" "plex AGENTS: keeps subtree dev rule"
+assert_contains "$PLEX_AGENTS" "Mergebeslut, review-gates, auto-merge och tillåten merge-metod styrs enbart av root `/AGENTS.md`" "plex AGENTS: does not duplicate global merge policy"
+assert_not_contains "$PLEX_AGENTS" "Aktivera automatisk sammanfogning direkt" "plex AGENTS: legacy immediate auto-merge rule removed"
+assert_not_contains "$AGENTS" "Ownership Map" "AGENTS.md: lacks ownership map"
 
-assert_contains "$AGENTS" "Ändra kod" "AGENTS.md: tillåter kodändringar"
-assert_contains "$AGENTS" "Köra tester" "AGENTS.md: tillåter tester"
-assert_contains "$AGENTS" "Öppna ändringsförslag från `dev`" "AGENTS.md: använder dev som ändringsgren"
-
-assert_contains "$AGENTS" "Skicka ändringar direkt till `main` eller `master`" "AGENTS.md: förbjuder direktändringar på standardgrenen"
-assert_contains "$AGENTS" "Radera grenar" "AGENTS.md: förbjuder radering av grenar"
-assert_contains "$AGENTS" "Stänga av arbetsflöden" "AGENTS.md: förbjuder avstängda arbetsflöden"
-assert_contains "$AGENTS" "Ändra hemligheter" "AGENTS.md: förbjuder ändringar av hemligheter"
-
-assert_contains "$AGENTS" "Alla tester måste godkännas" "AGENTS.md: kräver godkända tester"
-assert_contains "$AGENTS" "Starta inte en ny koduppgift medan ett ändringsförslag från `dev` är öppet" "AGENTS.md: serialiserar arbetet på dev"
-assert_contains "$AGENTS" "automatisk sammanfogning med en metod som tillåts" "AGENTS.md: kräver tillåten automatisk sammanfogning"
-assert_contains "$AGENTS" "Ta aldrig med orelaterade ändringar" "AGENTS.md: förbjuder orelaterade ändringar"
-assert_contains "$AGENTS" "Tvinga aldrig igenom en skickning" "AGENTS.md: förbjuder tvingad skickning"
-
-assert_not_contains "$AGENTS" "claude/" "AGENTS.md: saknar agentspecifika grennamn"
-assert_not_contains "$AGENTS" "Ownership Map" "AGENTS.md: saknar ägarkarta"
-
-# ---------------------------------------------------------------------------
 echo "=== CLAUDE.md: required sections and conventions ==="
-
 CLAUDEMD="$REPO_ROOT/CLAUDE.md"
-
 assert_contains "$CLAUDEMD" "## Tech Stack" "CLAUDE.md: has 'Tech Stack' section"
 assert_contains "$CLAUDEMD" "## File Overview" "CLAUDE.md: has 'File Overview' section"
 assert_contains "$CLAUDEMD" "## Conventions" "CLAUDE.md: has 'Conventions' section"
-
-# Tech stack entries
 assert_contains "$CLAUDEMD" "Python" "CLAUDE.md: mentions Python"
 assert_contains "$CLAUDEMD" "Docker" "CLAUDE.md: mentions Docker"
 assert_contains "$CLAUDEMD" "rclone" "CLAUDE.md: mentions rclone"
 assert_contains "$CLAUDEMD" "msmtp" "CLAUDE.md: mentions msmtp"
-
-# File overview lists key Python modules
 assert_contains "$CLAUDEMD" "src/entrypoint.py" "CLAUDE.md: lists src/entrypoint.py"
 assert_contains "$CLAUDEMD" "src/run.py" "CLAUDE.md: lists src/run.py"
 assert_contains "$CLAUDEMD" "src/backup.py" "CLAUDE.md: lists src/backup.py"
 assert_contains "$CLAUDEMD" "src/config.py" "CLAUDE.md: lists src/config.py"
-
-# Convention: no hardcoded secrets
 assert_contains "$CLAUDEMD" "never hardcoded" "CLAUDE.md: secrets must not be hardcoded"
-
-# Convention: test with docker compose run --rm
 assert_contains "$CLAUDEMD" "docker compose run --rm" "CLAUDE.md: test command is docker compose run --rm"
 
-# ---------------------------------------------------------------------------
 echo ""
 echo "Results: $PASS passed, $FAIL failed"
-if [ "$FAIL" -gt 0 ]; then
-    exit 1
-fi
+if [ "$FAIL" -gt 0 ]; then exit 1; fi
