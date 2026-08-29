@@ -1,13 +1,9 @@
 name: Python lint & tests
 
 on:
-  # Merge-kön skickar merge_group.checks_requested. Utan den här
-  # triggern svarar inget jobb och kön fastnar tills timeout.
-  merge_group:
   pull_request:
   push:
-    branches:
-      - main
+    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -23,44 +19,33 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
-          python-version: '3.x'
-      # Ruff installeras med pip i stallet for via setup-uv. Versionen ar
-      # fortfarande pinnad -- utan pin hamtas senaste och CI kan ga sonder
-      # av en uppstromsandring. Se commit-meddelandet for varfor actionen
-      # togs bort.
-      - name: ruff check
+          python-version: '3.13'
+      - name: Ruff
         run: |
-          python -m pip install --upgrade pip
+          # Pinnen håller lint/format-regler deterministiska. Uppdatera den
+          # avsiktligt när en ny Ruff-version har verifierats mot src/.
           python -m pip install ruff==0.16.0
           ruff check src/
-      - name: ruff format
-        run: ruff format --check src/
+          ruff format --check src/
 
-  # Ett jobb för alla tre delarna. Inte en matris: den obligatoriska checken
-  # heter python, och matrisjobb heter "python (plex-clear-watchlist)" — namnet
-  # skulle försvinna och checken fastna på "Expected — waiting for status".
+  # Rulesetet kräver statuskontexten exakt "python". Behåll jobbnamnet.
   python:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
-          python-version: '3.x'
+          python-version: '3.13'
           cache: pip
 
       - name: Installera beroenden
         run: |
-          python -m pip install --upgrade pip
           find . -path './.git' -prune -o -name 'requirements.txt' -print0 \
             | xargs -0 -r -n1 python -m pip install -r
 
       - name: Kompilera
         run: python -m compileall .
 
-      # Villkoret letar efter test_*.py, inte efter en tests-katalog: rotens
-      # tests/ innehåller skalskript, och pytest avslutar med kod 5 när den
-      # inte hittar något att köra — vilket fäller jobbet utan att något är fel.
       - name: Kör tester
         run: |
           python -m pip install pytest
