@@ -72,35 +72,13 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Välj ledig arbetsgren
+      - name: Välj arbetsgren
         if: steps.gate.outputs.eligible == 'true' && steps.existing.outputs.exists != 'true'
         id: branch
         shell: bash
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           ISSUE_NUMBER: ${{ steps.gate.outputs.issue_number }}
-        run: |
-          set -euo pipefail
-          git fetch --no-tags origin main work/fix work/chore work/feature
-          main_sha="$(git rev-parse origin/main)"
-
-          for branch in work/fix work/chore work/feature; do
-            branch_sha="$(git rev-parse "origin/${branch}")"
-            open_prs="$(gh pr list --state open --head "$branch" --json number --jq 'length')"
-            if [ "$branch_sha" = "$main_sha" ] && [ "$open_prs" = "0" ]; then
-              echo "name=$branch" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-          done
-
-          body_file="$(mktemp)"
-          cat > "$body_file" <<'EOF'
-          <!-- skvallerbyttan-codex-dispatch:blocked -->
-          Codex-dispatchen kunde inte starta: alla poolgrenar (`work/fix`, `work/chore`, `work/feature`) är upptagna eller ligger inte exakt på `main`. Ingen branch eller protection kringgicks.
-          EOF
-          gh issue comment "$ISSUE_NUMBER" --body-file "$body_file"
-          echo "Ingen ledig poolgren för Codex-remediation" >&2
-          exit 1
+        run: echo "name=automation/codex-issue-${ISSUE_NUMBER}" >> "$GITHUB_OUTPUT"
 
       - name: Skapa seed-commit
         if: steps.gate.outputs.eligible == 'true' && steps.existing.outputs.exists != 'true'
@@ -110,7 +88,7 @@ jobs:
           ISSUE_NUMBER: ${{ steps.gate.outputs.issue_number }}
         run: |
           set -euo pipefail
-          git checkout -B "$BRANCH" "origin/$BRANCH"
+          git checkout -B "$BRANCH" origin/main
           git config user.name "gamnacken[bot]"
           git config user.email "316993076+gamnacken[bot]@users.noreply.github.com"
 
@@ -177,13 +155,13 @@ jobs:
           - Run the relevant tests/typechecks and fix every valid CI or review finding on this same PR.
           - Re-read review summaries and unresolved inline threads after every push.
           - Resolve a review thread only after its valid finding is fixed or a concrete evidentiary reply shows why no change is correct.
-          - Auto-merge is already armed; do not bypass branch protection, required checks, review resolution, or the merge queue.
+          - Auto-merge is already armed; do not bypass branch protection, required checks, review resolution, or repository rules.
           EOF
           gh pr comment "$PR_URL" --body-file "$prompt_file"
 
           issue_body="$(mktemp)"
           cat > "$issue_body" <<EOF
           <!-- skvallerbyttan-codex-pr:${ISSUE_NUMBER} -->
-          Codex-remediation har flyttats till PR-kontext: ${PR_URL}. Auto-merge är armerad; CI, review-trådar och merge queue är fortsatt blockerande.
+          Codex-remediation har flyttats till PR-kontext: ${PR_URL}. Auto-merge är armerad; CI och review-trådar är fortsatt blockerande.
           EOF
           gh issue comment "$ISSUE_NUMBER" --body-file "$issue_body"
