@@ -21,13 +21,16 @@ assert_not_contains() {
 }
 
 assert_yaml_field() {
-    local file="$1" py_expr="$2" expected="$3" label="$4"
-    actual="$(python3 -c "
+    local file="$1" py_expr="$2" expected="$3" label="$4" actual
+    if ! actual="$(python3 -c "
 import yaml
 data = yaml.safe_load(open('$file'))
 result = $py_expr
 print(str(result))
-" 2>/dev/null)"
+" 2>/dev/null)"; then
+        fail "$label (YAML/Python evaluation failed)"
+        return
+    fi
     if [ "$actual" = "$expected" ]; then pass "$label"; else fail "$label (expected '$expected', got '$actual')"; fi
 }
 
@@ -73,7 +76,7 @@ assert_contains "$PRTEMPLATE" "## Testing" "pr_template: has Testing section"
 assert_contains "$PRTEMPLATE" "## Checklist" "pr_template: has Checklist section"
 assert_contains "$PRTEMPLATE" "Tests pass locally" "pr_template: has 'Tests pass locally' checklist item"
 assert_contains "$PRTEMPLATE" "PR is focused and isolated" "pr_template: has 'PR is focused and isolated' checklist item"
-assert_contains "$PRTEMPLATE" "No unrelated changes are included" "pr_template: has 'No unrelated changes' checklist item"
+assert_contains "$PRTEMPLATE" "No unrelated changes are included" "pr_template: has 'No unrelated changes are included' checklist item"
 assert_contains "$PRTEMPLATE" "No credentials or secrets are committed" "pr_template: has 'No credentials or secrets are committed' checklist item"
 assert_contains "$PRTEMPLATE" "- [ ]" "pr_template: uses unchecked task list syntax"
 assert_contains "$PRTEMPLATE" "-" "pr_template: Summary section has content placeholder"
