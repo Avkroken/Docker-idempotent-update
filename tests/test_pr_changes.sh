@@ -22,12 +22,7 @@ assert_not_contains() {
 
 assert_yaml_field() {
     local file="$1" py_expr="$2" expected="$3" label="$4" actual
-    if ! actual="$(python3 -c "
-import yaml
-data = yaml.safe_load(open('$file'))
-result = $py_expr
-print(str(result))
-" 2>/dev/null)"; then
+    if ! actual="$(python3 -c "import yaml; data = yaml.safe_load(open('$file')); result = $py_expr; print(str(result))" 2>/dev/null)"; then
         fail "$label (YAML/Python evaluation failed)"
         return
     fi
