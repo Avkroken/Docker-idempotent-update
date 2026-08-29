@@ -61,7 +61,9 @@ jobs:
                   const closed=await github.paginate(github.rest.pulls.list,{owner,repo,state:'closed',head:`${owner}:${name}`,base,per_page:100});
                   if(closed.some((candidate)=>candidate.head?.sha===headSha))continue;
                   const previous=state[name];
-                  const firstSeenAt=previous?.firstSeenAt||new Date(now).toISOString();
+                  const firstSeenAt=previous?.headSha===headSha && previous?.firstSeenAt
+                    ? previous.firstSeenAt
+                    : new Date(now).toISOString();
                   next[name]={headSha,firstSeenAt};
                   const firstSeenMs=Date.parse(firstSeenAt);
                   if(!Number.isFinite(firstSeenMs)||now-firstSeenMs<=maxAgeMs)continue;
