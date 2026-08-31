@@ -21,7 +21,6 @@ runs:
         image-ref: ${{ inputs.image-ref }}
         format: sarif
         output: trivy-results.sarif
-        ignore-unfixed: true
         severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
         limit-severities-for-sarif: true
         exit-code: '0'
@@ -39,6 +38,5 @@ runs:
         scan-type: image
         image-ref: ${{ inputs.image-ref }}
         format: table
-        ignore-unfixed: true
         severity: HIGH,CRITICAL
         exit-code: '1'
