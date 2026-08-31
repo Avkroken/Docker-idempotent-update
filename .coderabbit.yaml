@@ -3,9 +3,9 @@
 inheritance: true
 
 reviews:
-  # Required rulesets use the stable legacy commit-status context `CodeRabbit`.
-  review_progress: false
-  commit_status: true
+  # Legacy commit-status can report success when a review is rate limited.
+  # Keep CodeRabbit on its canonical review-progress surface instead.
+  review_progress: true
   fail_commit_status: true
   auto_review:
     enabled: true
