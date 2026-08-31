@@ -1,6 +1,6 @@
 services:
   plex-clear-watchlist:
-    image: ghcr.io/blixten85/plex-clear-watchlist:latest
+    image: ghcr.io/avkroken/plex-clear-watchlist:latest
     build: .
     environment:
       - PLEX_TOKEN=${PLEX_TOKEN}
