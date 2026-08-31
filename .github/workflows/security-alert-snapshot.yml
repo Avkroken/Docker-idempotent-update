@@ -28,10 +28,21 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: automation/security-reports
+          ref: main
           fetch-depth: 0
           persist-credentials: true
           token: ${{ steps.app-token.outputs.token }}
+
+      - name: Förbered rapportbranch
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --heads origin refs/heads/automation/security-reports >/dev/null 2>&1; then
+            git fetch origin automation/security-reports
+            git switch -C automation/security-reports origin/automation/security-reports
+          else
+            git switch -c automation/security-reports
+          fi
+
       - name: Fetch and store open Code Scanning alerts
         env:
           GH_TOKEN: ${{ github.token }}
