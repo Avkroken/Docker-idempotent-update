@@ -32,6 +32,8 @@ För Docker-påverkande PR:er byggs både en baseline-image från PR:ens aktuell
 
 ## Code Scanning
 
+CodeQL körs med GitHubs Default setup. Repositoryt har inget separat Advanced CodeQL-workflow; GitHub hanterar den genererade CodeQL-konfigurationen och analyskörningarna.
+
 Rulesetet använder GitHubs Code Scanning merge protection för verktyget `CodeQL`:
 
 - security alerts: `medium_or_higher`
