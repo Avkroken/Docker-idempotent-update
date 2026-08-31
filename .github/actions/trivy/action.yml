@@ -1,7 +1,7 @@
 name: Trivy
 description: >-
-  Skannar en redan byggd, lokalt laddad image, laddar upp alla relevanta fynd
-  till code scanning och gör HIGH/CRITICAL-fynd blockerande via anropande jobb.
+  Skannar en redan byggd, lokalt laddad image och laddar upp alla relevanta fynd
+  till Code Scanning. Anropande workflow ansvarar för merge-blockerande policy.
 
 inputs:
   image-ref:
@@ -31,12 +31,3 @@ runs:
       with:
         sarif_file: trivy-results.sarif
         category: ${{ inputs.category }}
-
-    - name: Blockera HIGH/CRITICAL-fynd
-      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-      with:
-        scan-type: image
-        image-ref: ${{ inputs.image-ref }}
-        format: table
-        severity: HIGH,CRITICAL
-        exit-code: '1'
