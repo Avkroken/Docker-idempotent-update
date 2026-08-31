@@ -84,14 +84,14 @@ jobs:
           push: false
           load: true
           tags: |
-            ghcr.io/blixten85/plex-clear-watchlist:latest
-            ghcr.io/blixten85/plex-clear-watchlist:sha-${{ steps.sha.outputs.short }}
+            ghcr.io/avkroken/plex-clear-watchlist:latest
+            ghcr.io/avkroken/plex-clear-watchlist:sha-${{ steps.sha.outputs.short }}
 
       - name: Trivy
         if: steps.impact.outputs.docker == 'true'
         uses: ./.github/actions/trivy
         with:
-          image-ref: ghcr.io/blixten85/plex-clear-watchlist:sha-${{ steps.sha.outputs.short }}
+          image-ref: ghcr.io/avkroken/plex-clear-watchlist:sha-${{ steps.sha.outputs.short }}
           category: trivy-plex-clear-watchlist
 
       - name: Skanna baseline HIGH/CRITICAL
@@ -111,7 +111,7 @@ jobs:
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: image
-          image-ref: ghcr.io/blixten85/plex-clear-watchlist:sha-${{ steps.sha.outputs.short }}
+          image-ref: ghcr.io/avkroken/plex-clear-watchlist:sha-${{ steps.sha.outputs.short }}
           format: json
           output: trivy-current.json
           scanners: vuln
@@ -147,8 +147,8 @@ jobs:
       - name: Publicera imagen
         if: steps.impact.outputs.docker == 'true' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch')
         run: |
-          docker push ghcr.io/blixten85/plex-clear-watchlist:latest
-          docker push ghcr.io/blixten85/plex-clear-watchlist:sha-${{ steps.sha.outputs.short }}
+          docker push ghcr.io/avkroken/plex-clear-watchlist:latest
+          docker push ghcr.io/avkroken/plex-clear-watchlist:sha-${{ steps.sha.outputs.short }}
 
       - name: Hoppa över opåverkad Docker-build
         if: steps.impact.outputs.docker != 'true'
