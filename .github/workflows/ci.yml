@@ -22,6 +22,8 @@ jobs:
           python-version: '3.13'
       - name: Ruff
         run: |
+          # Pinnen håller lint/format-regler deterministiska. Uppdatera den
+          # avsiktligt när en ny Ruff-version har verifierats mot src/.
           python -m pip install ruff==0.16.0
           ruff check src/
           ruff format --check src/
