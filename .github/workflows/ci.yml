@@ -28,7 +28,6 @@ jobs:
           ruff check src/
           ruff format --check src/
 
-  # Rulesetet kräver statuskontexten exakt "python". Behåll jobbnamnet.
   python:
     runs-on: ubuntu-latest
     steps:
@@ -57,3 +56,17 @@ jobs:
               echo "--- $d: inga pytest-tester"
             fi
           done
+
+  required:
+    name: CI / required
+    if: ${{ always() }}
+    needs: [lint, python]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kontrollera Python-CI
+        env:
+          LINT_RESULT: ${{ needs.lint.result }}
+          PYTHON_RESULT: ${{ needs.python.result }}
+        run: |
+          test "$LINT_RESULT" = "success"
+          test "$PYTHON_RESULT" = "success"

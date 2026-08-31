@@ -1,7 +1,7 @@
 name: Trivy
 description: >-
-  Skannar en redan byggd, lokalt laddad image och laddar upp fynden till code
-  scanning utan att göra skanningen till en separat merge-gate.
+  Skannar en redan byggd, lokalt laddad image och laddar upp alla relevanta fynd
+  till Code Scanning. Anropande workflow ansvarar för merge-blockerande policy.
 
 inputs:
   image-ref:
@@ -14,14 +14,13 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Skanna imagen
+    - name: Skanna imagen för rapportering
       uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
       with:
         scan-type: image
         image-ref: ${{ inputs.image-ref }}
         format: sarif
         output: trivy-results.sarif
-        ignore-unfixed: true
         severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
         limit-severities-for-sarif: true
         exit-code: '0'

@@ -62,10 +62,25 @@ jobs:
         if: steps.impact.outputs.docker == 'true'
         run: echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
+      - name: Bygg baseline-image från aktuell main
+        id: baseline
+        if: steps.impact.outputs.docker == 'true' && github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          base_dir="$RUNNER_TEMP/trivy-base"
+          rm -rf "$base_dir"
+          git worktree add --detach "$base_dir" "$BASE_SHA"
+          image="local/trivy-baseline:${BASE_SHA::12}"
+          docker build --pull -t "$image" "$base_dir/plex-clear-watchlist"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+
       - uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         if: steps.impact.outputs.docker == 'true'
         with:
           context: plex-clear-watchlist
+          pull: true
           push: false
           load: true
           tags: |
@@ -78,6 +93,56 @@ jobs:
         with:
           image-ref: ghcr.io/blixten85/plex-clear-watchlist:sha-${{ steps.sha.outputs.short }}
           category: trivy-plex-clear-watchlist
+
+      - name: Skanna baseline HIGH/CRITICAL
+        if: steps.impact.outputs.docker == 'true' && github.event_name == 'pull_request'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ steps.baseline.outputs.image }}
+          format: json
+          output: trivy-baseline.json
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: '0'
+
+      - name: Skanna PR-image HIGH/CRITICAL
+        if: steps.impact.outputs.docker == 'true' && github.event_name == 'pull_request'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ghcr.io/blixten85/plex-clear-watchlist:sha-${{ steps.sha.outputs.short }}
+          format: json
+          output: trivy-current.json
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: '0'
+
+      - name: Blockera nya HIGH/CRITICAL-fynd
+        if: steps.impact.outputs.docker == 'true' && github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          extract_findings() {
+            jq -r '
+              [.Results[]?.Vulnerabilities[]?
+                | select(.Severity == "HIGH" or .Severity == "CRITICAL")
+                | [.VulnerabilityID, .PkgName, .Severity]]
+              | unique[]
+              | @tsv
+            ' "$1" | sort -u
+          }
+
+          extract_findings trivy-baseline.json > "$RUNNER_TEMP/trivy-baseline.tsv"
+          extract_findings trivy-current.json > "$RUNNER_TEMP/trivy-current.tsv"
+          comm -13 "$RUNNER_TEMP/trivy-baseline.tsv" "$RUNNER_TEMP/trivy-current.tsv" > "$RUNNER_TEMP/trivy-new.tsv"
+
+          if [[ -s "$RUNNER_TEMP/trivy-new.tsv" ]]; then
+            echo "::error::PR-imagen introducerar nya HIGH/CRITICAL-sårbarheter jämfört med aktuell main."
+            cat "$RUNNER_TEMP/trivy-new.tsv"
+            exit 1
+          fi
+
+          echo "Inga nya HIGH/CRITICAL-sårbarheter jämfört med aktuell main."
 
       - name: Publicera imagen
         if: steps.impact.outputs.docker == 'true' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch')
