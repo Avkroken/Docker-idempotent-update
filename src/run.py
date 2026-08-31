@@ -71,6 +71,6 @@ if __name__ == "__main__":
     except Exception as exc:
         log.exception("Unhandled error in daily run")
         report_error_to_github(
-            "blixten85/docker-idempotent-update", "Daglig körning kraschade", exc
+            "Avkroken/Docker-idempotent-update", "Daglig körning kraschade", exc
         )
         raise

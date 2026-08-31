@@ -20,8 +20,10 @@ jobs:
         with:
           script: |
             const package_name = 'plex-clear-watchlist';
+            const org = context.repo.owner;
             const { data: versions } =
-              await github.rest.packages.getAllPackageVersionsForPackageOwnedByAuthenticatedUser({
+              await github.rest.packages.getAllPackageVersionsForPackageOwnedByOrg({
+                org,
                 package_type: 'container',
                 package_name,
                 per_page: 100,
@@ -33,7 +35,8 @@ jobs:
             for (const v of versions) {
               const tags = v.metadata?.container?.tags ?? [];
               if (tags.some(t => keep.has(t))) continue;
-              await github.rest.packages.deletePackageVersionForAuthenticatedUser({
+              await github.rest.packages.deletePackageVersionForOrg({
+                org,
                 package_type: 'container',
                 package_name,
                 package_version_id: v.id,
@@ -41,4 +44,4 @@ jobs:
               deleted++;
             }
 
-            console.log(`${package_name}: raderade ${deleted} gamla versioner`);
+            console.log(`${org}/${package_name}: raderade ${deleted} gamla versioner`);

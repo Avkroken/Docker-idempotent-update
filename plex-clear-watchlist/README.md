@@ -1,7 +1,7 @@
 # Plex Clear Watchlist
 
-[![CI](https://github.com/blixten85/docker-idempotent-update/actions/workflows/ci.yml/badge.svg)](https://github.com/blixten85/docker-idempotent-update/actions/workflows/ci.yml)
-[![Image](https://ghcr-badge.egpl.dev/blixten85/plex-clear-watchlist/size?color=blue&label=image)](https://github.com/users/blixten85/packages/container/package/plex-clear-watchlist)
+[![CI](https://github.com/Avkroken/Docker-idempotent-update/actions/workflows/ci.yml/badge.svg)](https://github.com/Avkroken/Docker-idempotent-update/actions/workflows/ci.yml)
+[![Image](https://ghcr-badge.egpl.dev/avkroken/plex-clear-watchlist/size?color=blue&label=image)](https://github.com/orgs/Avkroken/packages/container/package/plex-clear-watchlist)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 Delete all items from your Plex Watchlist via the Plex API.
@@ -28,7 +28,7 @@ docker compose run --rm plex-clear-watchlist --dry-run
 ## Docker
 
 ```bash
-docker run --rm -e PLEX_TOKEN=your-token ghcr.io/blixten85/plex-clear-watchlist --dry-run
+docker run --rm -e PLEX_TOKEN=your-token ghcr.io/avkroken/plex-clear-watchlist --dry-run
 ```
 
 ## Python
