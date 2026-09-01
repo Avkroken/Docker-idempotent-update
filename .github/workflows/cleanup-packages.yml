@@ -15,12 +15,15 @@ jobs:
       - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           script: |
-            const { data: versions } = await github.rest.packages.getAllPackageVersionsForPackageOwnedByOrg({
-              org: context.repo.owner,
-              package_type: 'container',
-              package_name: 'plex-clear-watchlist',
-              per_page: 100,
-            });
+            const versions = await github.paginate(
+              github.rest.packages.getAllPackageVersionsForPackageOwnedByOrg,
+              {
+                org: context.repo.owner,
+                package_type: 'container',
+                package_name: 'plex-clear-watchlist',
+                per_page: 100,
+              },
+            );
 
             for (const version of versions) {
               const tags = version.metadata?.container?.tags ?? [];
