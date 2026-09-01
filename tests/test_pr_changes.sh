@@ -93,7 +93,7 @@ assert_yaml_field "$CI" "data['permissions']['contents']" "read" "ci.yml: permis
 assert_yaml_field "$CI" "str(set(data['jobs']) == {'required'})" "True" "ci.yml: defines only required job"
 assert_yaml_field "$CI" "data['jobs']['required']['name']" "CI / required" "ci.yml: required context is stable"
 assert_yaml_field "$CI" "data['jobs']['required']['runs-on']" "ubuntu-latest" "ci.yml: required job runs on ubuntu-latest"
-assert_yaml_field "$CI" "str(any('ruff check src/ plex-clear-watchlist/' in str(s.get('run','')) for s in data['jobs']['required']['steps']))" "True" "ci.yml: Ruff covers both Python trees"
+assert_yaml_field "$CI" "str(any('ruff check src/' in str(s.get('run','')) and 'plex-clear-watchlist/' not in str(s.get('run','')) for s in data['jobs']['required']['steps']))" "True" "ci.yml: Ruff preserves established root src scope"
 assert_yaml_field "$CI" "str(any('python -m compileall -q src plex-clear-watchlist' in str(s.get('run','')) for s in data['jobs']['required']['steps']))" "True" "ci.yml: compiles both Python trees"
 assert_yaml_field "$CI" "str(any('bash tests/test_pr_changes.sh' in str(s.get('run','')) for s in data['jobs']['required']['steps']))" "True" "ci.yml: runs repository test harness"
 
