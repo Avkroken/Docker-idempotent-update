@@ -16,7 +16,7 @@ permissions:
 
 concurrency:
   group: docker-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'publisher' }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: true
 
 jobs:
   docker:
@@ -126,6 +126,10 @@ jobs:
 
       - name: Publish image
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        shell: bash
         run: |
+          set -euo pipefail
           docker push "$IMAGE:latest"
-          docker push "$IMAGE:${GITHUB_SHA}"
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            docker push "$IMAGE:${GITHUB_SHA}"
+          fi

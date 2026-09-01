@@ -25,12 +25,14 @@ jobs:
       - name: Install dependencies
         run: |
           # Keep lint/format behavior deterministic; update this pin deliberately
-          # after the new Ruff release has been verified against src/.
-          python -m pip install ruff==0.16.0
+          # after the new Ruff release has been verified against both Python trees.
+          python -m pip install ruff==0.16.0 PyYAML
           python -m pip install -r plex-clear-watchlist/requirements.txt
       - name: Lint
         run: |
-          ruff check src/
-          ruff format --check src/
+          ruff check src/ plex-clear-watchlist/
+          ruff format --check src/ plex-clear-watchlist/
       - name: Verify Python sources
         run: python -m compileall -q src plex-clear-watchlist
+      - name: Run repository test harness
+        run: bash tests/test_pr_changes.sh
