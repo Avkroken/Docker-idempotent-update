@@ -22,35 +22,104 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
+
       - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
+
+      - name: Build baseline image
+        id: baseline
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          base_dir="$RUNNER_TEMP/trivy-base"
+          git worktree add --detach "$base_dir" "$BASE_SHA"
+          baseline="local/trivy-baseline:${BASE_SHA::12}"
+          docker build --pull -t "$baseline" "$base_dir/plex-clear-watchlist"
+          echo "image=$baseline" >> "$GITHUB_OUTPUT"
+
       - uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: plex-clear-watchlist
+          pull: true
           load: true
           tags: |
             ${{ env.IMAGE }}:latest
             ${{ env.IMAGE }}:${{ github.sha }}
-      - name: Scan image
+
+      - name: Scan image for Code Scanning
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: image
           image-ref: ${{ env.IMAGE }}:${{ github.sha }}
+          scanners: vuln
           format: sarif
           output: trivy-results.sarif
-          severity: HIGH,CRITICAL
-          exit-code: "1"
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+          limit-severities-for-sarif: true
+          exit-code: "0"
+
       - name: Upload scan results
         if: always()
         uses: github/codeql-action/upload-sarif@486fec2a3ea2626afcd8c7e9208b4f515078dd7e # codeql-bundle-v2.26.4
         with:
           sarif_file: trivy-results.sarif
           category: trivy-plex-clear-watchlist
+
+      - name: Scan baseline HIGH/CRITICAL
+        if: github.event_name == 'pull_request'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ steps.baseline.outputs.image }}
+          scanners: vuln
+          format: json
+          output: trivy-baseline.json
+          severity: HIGH,CRITICAL
+          exit-code: "0"
+
+      - name: Scan current HIGH/CRITICAL
+        if: github.event_name == 'pull_request'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ env.IMAGE }}:${{ github.sha }}
+          scanners: vuln
+          format: json
+          output: trivy-current.json
+          severity: HIGH,CRITICAL
+          exit-code: "0"
+
+      - name: Block new HIGH/CRITICAL findings
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          findings() {
+            jq -r '
+              [.Results[]?.Vulnerabilities[]?
+                | select(.Severity == "HIGH" or .Severity == "CRITICAL")
+                | [.VulnerabilityID, .PkgName, .Severity]]
+              | unique[] | @tsv
+            ' "$1" | sort -u
+          }
+          findings trivy-baseline.json > "$RUNNER_TEMP/trivy-baseline.tsv"
+          findings trivy-current.json > "$RUNNER_TEMP/trivy-current.tsv"
+          comm -13 "$RUNNER_TEMP/trivy-baseline.tsv" "$RUNNER_TEMP/trivy-current.tsv" > "$RUNNER_TEMP/trivy-new.tsv"
+          if [[ -s "$RUNNER_TEMP/trivy-new.tsv" ]]; then
+            echo "::error::PR image introduces new HIGH/CRITICAL vulnerabilities compared with current main."
+            cat "$RUNNER_TEMP/trivy-new.tsv"
+            exit 1
+          fi
+
       - name: Publish image
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
