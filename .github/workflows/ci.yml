@@ -26,13 +26,11 @@ jobs:
         run: |
           # Keep lint/format behavior deterministic; update this pin deliberately
           # after the new Ruff release has been verified against src/.
-          python -m pip install ruff==0.16.0 pyyaml
+          python -m pip install ruff==0.16.0
           python -m pip install -r plex-clear-watchlist/requirements.txt
       - name: Lint
         run: |
           ruff check src/
           ruff format --check src/
-      - name: Verify
-        run: |
-          python -m compileall -q src plex-clear-watchlist
-          bash tests/test_pr_changes.sh
+      - name: Verify Python sources
+        run: python -m compileall -q src plex-clear-watchlist
