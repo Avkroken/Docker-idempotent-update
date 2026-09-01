@@ -24,6 +24,8 @@ jobs:
           cache-dependency-path: plex-clear-watchlist/requirements.txt
       - name: Install dependencies
         run: |
+          # Keep lint/format behavior deterministic; update this pin deliberately
+          # after the new Ruff release has been verified against src/.
           python -m pip install ruff==0.16.0 pyyaml
           python -m pip install -r plex-clear-watchlist/requirements.txt
       - name: Lint
