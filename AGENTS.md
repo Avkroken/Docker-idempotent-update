@@ -84,7 +84,7 @@ Kör relevanta tester före push; för containerändringar verifiera med Docker/
 
 `.github/workflows/pr-watchdog.yml` bevakar lokala branches utom `main`, merge-köns `gh-readonly-queue/*`, state-branchen `automation/pr-watchdog-state` och uttryckliga permanenta undantag. Efter mer än 60 minuter på samma observerade HEAD utan öppen PR skapar den en ready PR till `main` och armerar auto-merge. Den avgör inte mergebarhet; CI och review-gates gör det.
 
-Säkerhetsremediation använder en separat `automation/codex-issue-<nummer>`-branch per issue och öppnar PR till `main`; den är inte beroende av en permanent branchpool.
+Säkerhetsalerts hanteras av GitHubs native säkerhetsfunktioner; kodändringar går genom repositoryts ordinarie PR-flöde och gates.
 
 ### Plex-subtree
 
