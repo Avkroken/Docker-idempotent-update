@@ -40,6 +40,16 @@ Efter varje ny commit ska aktuell HEAD, required checks/CI, mergeability och rev
 
 Repositoryts aktuella ruleset, branch protection, merge queue och repositoryinställningar bestämmer tillåtna merge-metoder och övriga gates. Kringgå aldrig dessa. Om PR:n inte auto-mergas trots gröna required checks och lösta relevanta review-trådar ska exakt kvarvarande blockerare identifieras och rapporteras.
 
+## PR-scope efter öppning
+
+Den här sektionen förtydligar tidigare formuleringar om att relevanta findings ska åtgärdas i samma PR.
+
+- När en PR har öppnats är dess avsedda scope, så som det beskrivs i PR:n, fryst. Fortsatta commits får endast slutföra eller korrigera det scopet.
+- Om CI, Code Scanning, tester eller review hittar ett fel som orsakas av PR:ns befintliga ändringar ska just det felet rättas på samma branch/PR. Det är en korrigering inom scope, inte ny scope.
+- Ny funktionalitet, opportunistiska refactors, städning eller separata förbättringar som upptäcks efter att PR:n öppnats ska få en ny kortlivad branch och en ny PR från aktuell `main`; återanvänd inte den öppna PR-grenen för nästa uppgift.
+- Försök inte hinna lägga commits före eller under en pågående CI-/reviewkörning av tidsskäl. Gör en komplett ändring, pusha den, låt gates utvärdera den HEAD:en och reagera därefter.
+- Efter varje korrigerande commit ska relevanta tester köras om och hela tillämpliga gate- och review-state verifieras på den nya HEAD:en före merge.
+
 ## Credentials och AI-infrastruktur
 
 Committa eller exponera aldrig secrets, tokens, privata nycklar eller andra credentials. Lägg inte till `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` eller annan extern AI-provider-credential i repository, Actions secrets eller organisationskonfiguration utan uttryckligt godkännande från repository- eller organisationsägaren.
