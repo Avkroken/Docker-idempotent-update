@@ -82,7 +82,20 @@ Arbete sker via tillfälliga arbetsgrenar och pull requests till `main`. Grennam
 
 Kör relevanta tester före push; för containerändringar verifiera med Docker/Compose när det är praktiskt.
 
-Repositoryts workflows ska vara små och ha ett tydligt ansvar: Python-CI, Docker/Trivy, OSV och paketstädning. Workflows får inte skapa eller uppdatera pull requests eller branches, arma eller genomföra merge, automatisera review, delegera arbete till AI-agenter eller lagra säkerhetsalert-snapshots i repositoryt. Säkerhetsalerts hanteras av GitHubs native säkerhetsfunktioner; kodändringar går genom repositoryts ordinarie PR-flöde och gates.
+Repositoryts workflows ska vara små och ha ett tydligt ansvar: Python-CI, Docker/Trivy, OSV, paketstädning samt de två centrala metadata-callers som beskrivs nedan. Workflows får inte skapa eller uppdatera pull requests eller branches, arma eller genomföra merge, automatisera review, delegera remediation/kodarbete till AI-agenter eller lagra säkerhetsalert-snapshots i repositoryt. Säkerhetsalerts hanteras av GitHubs native säkerhetsfunktioner; kodändringar går genom repositoryts ordinarie PR-flöde och gates.
+
+### Metadata-only AI triage exception
+
+Repositoryägaren har uttryckligen godkänt metadata-only issue triage via GitHub Agentic Workflows. Detta är ett smalt undantag från bredare förbud mot AI-router/delegeringsworkflows och gäller inte kodarbete eller remediation.
+
+- `.github/workflows/metadata-routing.yml` får endast anropa Avkrokens centrala deterministiska metadata-routing för assignee och labels.
+- `.github/workflows/issue-classification.yml` får endast trigga på öppnade/återöppnade issues och anropa den SHA-pinnade centrala `issue-classification.lock.yml`.
+- AI-delen får läsa det triggande issuet och read-only repositorykontext som behövs för klassificering.
+- `gh-aw` safe outputs får endast lägga till exakt en `difficulty:*` och en `security:*` label från den centrala allowlisten.
+- Workflowen får inte kommentera, assigna coding agents, skapa/ändra branches eller PR:er, reviewa, mergea, deploya eller utföra/föreslå remediation.
+- Copilot-auth får komma från organization billing eller GitHub Actions-secreten `COPILOT_GITHUB_TOKEN`. Credentialvärden får aldrig committas, loggas eller kopieras till dokumentation.
+
+Detta undantag ändrar inte övriga regler om AI-remediation, säkerhetsalerts, PR/branch-mutation, review eller merge.
 
 ### Plex-subtree
 
