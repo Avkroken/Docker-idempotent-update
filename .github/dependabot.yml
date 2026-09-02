@@ -4,8 +4,7 @@ updates:
     assignees: ["blixten85"]
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "saturday"
+      interval: "daily"
       time: "01:00"
       timezone: "Europe/Stockholm"
     groups:
@@ -19,8 +18,7 @@ updates:
     directories:
       - "/plex-clear-watchlist"
     schedule:
-      interval: "weekly"
-      day: "saturday"
+      interval: "daily"
       time: "01:10"
       timezone: "Europe/Stockholm"
     groups:
@@ -31,8 +29,7 @@ updates:
     assignees: ["blixten85"]
     directory: "/plex-clear-watchlist"
     schedule:
-      interval: "weekly"
-      day: "saturday"
+      interval: "daily"
       time: "01:20"
       timezone: "Europe/Stockholm"
     groups:
@@ -43,8 +40,7 @@ updates:
     assignees: ["blixten85"]
     directory: "/plex-clear-watchlist"
     schedule:
-      interval: "weekly"
-      day: "saturday"
+      interval: "daily"
       time: "01:30"
       timezone: "Europe/Stockholm"
     groups:
