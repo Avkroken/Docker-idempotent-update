@@ -1,11 +1,8 @@
-name: Cleanup old package versions
-
-# Varje push till main lägger en sha-taggad version i ghcr. Utan städning
-# växer paketet obegränsat; här behålls bara latest.
+name: Cleanup packages
 
 on:
   schedule:
-    - cron: '0 3 * * 0' # söndagar 03:00
+    - cron: "0 3 * * 0"
   workflow_dispatch:
 
 permissions:
@@ -15,33 +12,26 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     steps:
-      - name: Radera otaggade och gamla sha-versioner
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           script: |
-            const package_name = 'plex-clear-watchlist';
-            const org = context.repo.owner;
-            const { data: versions } =
-              await github.rest.packages.getAllPackageVersionsForPackageOwnedByOrg({
-                org,
+            const versions = await github.paginate(
+              github.rest.packages.getAllPackageVersionsForPackageOwnedByOrg,
+              {
+                org: context.repo.owner,
                 package_type: 'container',
-                package_name,
+                package_name: 'plex-clear-watchlist',
                 per_page: 100,
-              });
+              },
+            );
 
-            const keep = new Set(['latest']);
-            let deleted = 0;
-
-            for (const v of versions) {
-              const tags = v.metadata?.container?.tags ?? [];
-              if (tags.some(t => keep.has(t))) continue;
+            for (const version of versions) {
+              const tags = version.metadata?.container?.tags ?? [];
+              if (tags.includes('latest')) continue;
               await github.rest.packages.deletePackageVersionForOrg({
-                org,
+                org: context.repo.owner,
                 package_type: 'container',
-                package_name,
-                package_version_id: v.id,
+                package_name: 'plex-clear-watchlist',
+                package_version_id: version.id,
               });
-              deleted++;
             }
-
-            console.log(`${org}/${package_name}: raderade ${deleted} gamla versioner`);

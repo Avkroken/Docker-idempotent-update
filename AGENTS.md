@@ -76,15 +76,13 @@ Dagligt Docker-underhåll i en container: hämtar images, återskapar ändrade c
 
 Undvik versionspinnar om de inte behövs. Nödvändiga pinnar ska dokumenteras med orsak och villkor för att kunna tas bort. GitHub Actions är undantaget: pinna actions till commit-SHA och låt Dependabot uppdatera dem.
 
-### Branch- och automationskontrakt
+### Branch- och workflowkontrakt
 
 Arbete sker via tillfälliga arbetsgrenar och pull requests till `main`. Grennamn ska beskriva arbetet; återanvändbara `work/*`-grenar är tillåtna men inte obligatoriska eller särskilt ruleset-skyddade.
 
 Kör relevanta tester före push; för containerändringar verifiera med Docker/Compose när det är praktiskt.
 
-`.github/workflows/pr-watchdog.yml` bevakar lokala branches utom `main`, merge-köns `gh-readonly-queue/*`, state-branchen `automation/pr-watchdog-state` och uttryckliga permanenta undantag. Efter mer än 60 minuter på samma observerade HEAD utan öppen PR skapar den en ready PR till `main` och armerar auto-merge. Den avgör inte mergebarhet; CI och review-gates gör det.
-
-Säkerhetsremediation använder en separat `automation/codex-issue-<nummer>`-branch per issue och öppnar PR till `main`; den är inte beroende av en permanent branchpool.
+Repositoryts workflows ska vara små och ha ett tydligt ansvar: Python-CI, Docker/Trivy, OSV och paketstädning. Workflows får inte skapa eller uppdatera pull requests eller branches, arma eller genomföra merge, automatisera review, delegera arbete till AI-agenter eller lagra säkerhetsalert-snapshots i repositoryt. Säkerhetsalerts hanteras av GitHubs native säkerhetsfunktioner; kodändringar går genom repositoryts ordinarie PR-flöde och gates.
 
 ### Plex-subtree
 

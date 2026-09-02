@@ -1,155 +1,135 @@
-name: Docker build & Trivy
+name: Docker
 
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
-  pull_request:
   schedule:
-    - cron: '0 6 * * 1'
+    - cron: "0 6 * * 1"
   workflow_dispatch:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 permissions:
   contents: read
+  packages: write
+  security-events: write
+
+concurrency:
+  group: docker-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'publisher' }}
+  cancel-in-progress: true
 
 jobs:
   docker:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      security-events: write
+    env:
+      IMAGE: ghcr.io/avkroken/plex-clear-watchlist
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Bestäm Docker-påverkan
-        id: impact
-        env:
-          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
-          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-        run: |
-          set -euo pipefail
-          run=true
-          if [[ "${{ github.event_name }}" != "workflow_dispatch" && "${{ github.event_name }}" != "schedule" && -n "$BASE_SHA" && ! "$BASE_SHA" =~ ^0+$ ]]; then
-            run=false
-            while IFS= read -r file; do
-              case "$file" in
-                plex-clear-watchlist/*|.github/actions/trivy/*|.github/workflows/docker.yml)
-                  run=true
-                  break
-                  ;;
-              esac
-            done < <(git diff --name-only --diff-filter=ACMRDTUXB "$BASE_SHA" "$HEAD_SHA")
-          fi
-          echo "docker=$run" >> "$GITHUB_OUTPUT"
-          echo "Docker impact: $run"
-
       - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
-        if: steps.impact.outputs.docker == 'true' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch')
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ github.token }}
 
-      - name: Short SHA
-        id: sha
-        if: steps.impact.outputs.docker == 'true'
-        run: echo "short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-
-      - name: Bygg baseline-image från aktuell main
+      - name: Build baseline image
         id: baseline
-        if: steps.impact.outputs.docker == 'true' && github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request'
+        shell: bash
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
           base_dir="$RUNNER_TEMP/trivy-base"
-          rm -rf "$base_dir"
           git worktree add --detach "$base_dir" "$BASE_SHA"
-          image="local/trivy-baseline:${BASE_SHA::12}"
-          docker build --pull -t "$image" "$base_dir/plex-clear-watchlist"
-          echo "image=$image" >> "$GITHUB_OUTPUT"
+          baseline="local/trivy-baseline:${BASE_SHA::12}"
+          docker build --pull -t "$baseline" "$base_dir/plex-clear-watchlist"
+          echo "image=$baseline" >> "$GITHUB_OUTPUT"
 
       - uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
-        if: steps.impact.outputs.docker == 'true'
         with:
           context: plex-clear-watchlist
           pull: true
-          push: false
           load: true
           tags: |
-            ghcr.io/avkroken/plex-clear-watchlist:latest
-            ghcr.io/avkroken/plex-clear-watchlist:sha-${{ steps.sha.outputs.short }}
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
 
-      - name: Trivy
-        if: steps.impact.outputs.docker == 'true'
-        uses: ./.github/actions/trivy
+      - name: Scan image for Code Scanning
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          image-ref: ghcr.io/avkroken/plex-clear-watchlist:sha-${{ steps.sha.outputs.short }}
+          scan-type: image
+          image-ref: ${{ env.IMAGE }}:${{ github.sha }}
+          scanners: vuln
+          format: sarif
+          output: trivy-results.sarif
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+          limit-severities-for-sarif: true
+          exit-code: "0"
+
+      - name: Upload scan results
+        if: ${{ always() && hashFiles('trivy-results.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        uses: github/codeql-action/upload-sarif@486fec2a3ea2626afcd8c7e9208b4f515078dd7e # codeql-bundle-v2.26.4
+        with:
+          sarif_file: trivy-results.sarif
           category: trivy-plex-clear-watchlist
 
-      - name: Skanna baseline HIGH/CRITICAL
-        if: steps.impact.outputs.docker == 'true' && github.event_name == 'pull_request'
+      - name: Scan baseline HIGH/CRITICAL
+        if: github.event_name == 'pull_request'
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: image
           image-ref: ${{ steps.baseline.outputs.image }}
+          scanners: vuln
           format: json
           output: trivy-baseline.json
-          scanners: vuln
           severity: HIGH,CRITICAL
-          exit-code: '0'
+          exit-code: "0"
 
-      - name: Skanna PR-image HIGH/CRITICAL
-        if: steps.impact.outputs.docker == 'true' && github.event_name == 'pull_request'
+      - name: Scan current HIGH/CRITICAL
+        if: github.event_name == 'pull_request'
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: image
-          image-ref: ghcr.io/avkroken/plex-clear-watchlist:sha-${{ steps.sha.outputs.short }}
+          image-ref: ${{ env.IMAGE }}:${{ github.sha }}
+          scanners: vuln
           format: json
           output: trivy-current.json
-          scanners: vuln
           severity: HIGH,CRITICAL
-          exit-code: '0'
+          exit-code: "0"
 
-      - name: Blockera nya HIGH/CRITICAL-fynd
-        if: steps.impact.outputs.docker == 'true' && github.event_name == 'pull_request'
+      - name: Block new HIGH/CRITICAL findings
+        if: github.event_name == 'pull_request'
+        shell: bash
         run: |
           set -euo pipefail
-          extract_findings() {
+          findings() {
             jq -r '
               [.Results[]?.Vulnerabilities[]?
                 | select(.Severity == "HIGH" or .Severity == "CRITICAL")
                 | [.VulnerabilityID, .PkgName, .Severity]]
-              | unique[]
-              | @tsv
+              | unique[] | @tsv
             ' "$1" | sort -u
           }
-
-          extract_findings trivy-baseline.json > "$RUNNER_TEMP/trivy-baseline.tsv"
-          extract_findings trivy-current.json > "$RUNNER_TEMP/trivy-current.tsv"
+          findings trivy-baseline.json > "$RUNNER_TEMP/trivy-baseline.tsv"
+          findings trivy-current.json > "$RUNNER_TEMP/trivy-current.tsv"
           comm -13 "$RUNNER_TEMP/trivy-baseline.tsv" "$RUNNER_TEMP/trivy-current.tsv" > "$RUNNER_TEMP/trivy-new.tsv"
-
           if [[ -s "$RUNNER_TEMP/trivy-new.tsv" ]]; then
-            echo "::error::PR-imagen introducerar nya HIGH/CRITICAL-sårbarheter jämfört med aktuell main."
+            echo "::error::PR image introduces new HIGH/CRITICAL vulnerabilities compared with current main."
             cat "$RUNNER_TEMP/trivy-new.tsv"
             exit 1
           fi
 
-          echo "Inga nya HIGH/CRITICAL-sårbarheter jämfört med aktuell main."
-
-      - name: Publicera imagen
-        if: steps.impact.outputs.docker == 'true' && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch')
+      - name: Publish image
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        shell: bash
         run: |
-          docker push ghcr.io/avkroken/plex-clear-watchlist:latest
-          docker push ghcr.io/avkroken/plex-clear-watchlist:sha-${{ steps.sha.outputs.short }}
-
-      - name: Hoppa över opåverkad Docker-build
-        if: steps.impact.outputs.docker != 'true'
-        run: echo "Docker-contexten påverkas inte; inget imagebygge behövs."
+          set -euo pipefail
+          docker push "$IMAGE:latest"
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            docker push "$IMAGE:${GITHUB_SHA}"
+          fi
