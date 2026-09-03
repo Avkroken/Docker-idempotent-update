@@ -3,8 +3,6 @@ name: Docker
 on:
   pull_request:
     branches: [main]
-  merge_group:
-    types: [checks_requested]
   push:
     branches: [main]
   schedule:
@@ -17,7 +15,7 @@ permissions:
   security-events: write
 
 concurrency:
-  group: docker-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.event_name == 'merge_group' && github.event.merge_group.head_sha || 'publisher' }}
+  group: docker-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'publisher' }}
   cancel-in-progress: true
 
 jobs:
@@ -40,10 +38,10 @@ jobs:
 
       - name: Build baseline image
         id: baseline
-        if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+        if: github.event_name == 'pull_request'
         shell: bash
         env:
-          BASE_SHA: ${{ github.event_name == 'merge_group' && github.event.merge_group.base_sha || github.event.pull_request.base.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
           base_dir="$RUNNER_TEMP/trivy-base"
@@ -81,7 +79,7 @@ jobs:
           category: trivy-plex-clear-watchlist
 
       - name: Scan baseline HIGH/CRITICAL
-        if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+        if: github.event_name == 'pull_request'
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: image
@@ -93,7 +91,7 @@ jobs:
           exit-code: "0"
 
       - name: Scan current HIGH/CRITICAL
-        if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+        if: github.event_name == 'pull_request'
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: image
@@ -105,7 +103,7 @@ jobs:
           exit-code: "0"
 
       - name: Block new HIGH/CRITICAL findings
-        if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+        if: github.event_name == 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
@@ -121,7 +119,7 @@ jobs:
           findings trivy-current.json > "$RUNNER_TEMP/trivy-current.tsv"
           comm -13 "$RUNNER_TEMP/trivy-baseline.tsv" "$RUNNER_TEMP/trivy-current.tsv" > "$RUNNER_TEMP/trivy-new.tsv"
           if [[ -s "$RUNNER_TEMP/trivy-new.tsv" ]]; then
-            echo "::error::Candidate image introduces new HIGH/CRITICAL vulnerabilities compared with its merge base."
+            echo "::error::PR image introduces new HIGH/CRITICAL vulnerabilities compared with current main."
             cat "$RUNNER_TEMP/trivy-new.tsv"
             exit 1
           fi
