@@ -34,7 +34,8 @@ for f in \
     ".github/ISSUE_TEMPLATE/bug_report.yml" \
     ".github/ISSUE_TEMPLATE/config.yml" \
     ".github/ISSUE_TEMPLATE/feature_request.yml" \
-    ".github/workflows/ci.yml"
+    ".github/workflows/ci.yml" \
+    ".github/workflows/issue-classification.yml"
 do
     full="$REPO_ROOT/$f"
     if python3 -c "import yaml; yaml.safe_load(open('$full'))" 2>/dev/null; then pass "$f is valid YAML"; else fail "$f is valid YAML"; fi
@@ -96,6 +97,15 @@ assert_yaml_field "$CI" "data['jobs']['required']['runs-on']" "ubuntu-latest" "c
 assert_yaml_field "$CI" "str(any('ruff check src/' in str(s.get('run','')) and 'plex-clear-watchlist/' not in str(s.get('run','')) for s in data['jobs']['required']['steps']))" "True" "ci.yml: Ruff preserves established root src scope"
 assert_yaml_field "$CI" "str(any('python -m compileall -q src plex-clear-watchlist' in str(s.get('run','')) for s in data['jobs']['required']['steps']))" "True" "ci.yml: compiles both Python trees"
 assert_yaml_field "$CI" "str(any('bash tests/test_pr_changes.sh' in str(s.get('run','')) for s in data['jobs']['required']['steps']))" "True" "ci.yml: runs repository test harness"
+
+echo "=== issue-classification.yml: deterministic completion contract ==="
+CLASSIFY="$REPO_ROOT/.github/workflows/issue-classification.yml"
+assert_yaml_field "$CLASSIFY" "data['concurrency']['cancel-in-progress']" "False" "issue classification: overlapping runs are serialized"
+assert_contains "$CLASSIFY" 'issue-classification-${{ github.repository }}-${{ github.event.issue.number }}' "issue classification: concurrency is scoped to repository and issue"
+assert_yaml_field "$CLASSIFY" "data['jobs']['validate-classification']['needs']" "route" "issue classification: validation runs after routing"
+assert_yaml_field "$CLASSIFY" "data['jobs']['validate-classification']['permissions']['issues']" "read" "issue classification: final validator is read-only"
+assert_contains "$CLASSIFY" "^triage:(pending|invalid)$" "issue classification: incomplete routing state fails validation"
+assert_contains "$CLASSIFY" "Expected exactly one canonical difficulty and security label" "issue classification: final canonical labels are required"
 
 echo "=== Agent policy: central pointer and repository-specific contract ==="
 AGENTS="$REPO_ROOT/AGENTS.md"
