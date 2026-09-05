@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.1](https://github.com/Avkroken/Docker-idempotent-update/compare/v3.3.0...v3.3.1) (2026-09-05)
+
+
+### Documentation
+
+* rename governance file to REPO.md ([#419](https://github.com/Avkroken/Docker-idempotent-update/issues/419)) ([4491245](https://github.com/Avkroken/Docker-idempotent-update/commit/4491245991b89212fad4576fcdf169fb0af89713))
+
 ## [3.3.0](https://github.com/Avkroken/Docker-idempotent-update/compare/v3.2.1...v3.3.0) (2026-09-04)
 
 
