@@ -109,14 +109,14 @@ assert_contains "$CLASSIFY" "Expected exactly one canonical difficulty and secur
 
 echo "=== Agent policy: central pointer and repository-specific contract ==="
 AGENTS="$REPO_ROOT/AGENTS.md"
-REPO_POLICY="$REPO_ROOT/DOCKER-IDEMPOTENT-UPDATE.md"
+REPO_POLICY="$REPO_ROOT/REPO.md"
 PLEX_AGENTS="$REPO_ROOT/plex-clear-watchlist/AGENTS.md"
 assert_contains "$AGENTS" "https://github.com/Avkroken/.github/blob/main/AGENTS.md" "AGENTS.md: points to canonical Avkroken policy"
 assert_contains "$AGENTS" "Read and follow that document completely before making changes in this repository." "AGENTS.md: requires canonical policy to be read"
 assert_not_contains "$AGENTS" "<!-- AVKROKEN-COMMON:START -->" "AGENTS.md: no longer embeds managed common policy"
 assert_not_contains "$AGENTS" "## Repository-specifika instruktioner" "AGENTS.md: contains no repository-specific policy"
-if [ -f "$REPO_POLICY" ]; then pass "repository-specific policy uses <REPO>.md naming"; else fail "repository-specific policy uses <REPO>.md naming"; fi
-assert_contains "$REPO_POLICY" "# DOCKER-IDEMPOTENT-UPDATE.md" "repository policy: has canonical repository filename heading"
+if [ -f "$REPO_POLICY" ]; then pass "repository-specific policy uses REPO.md naming"; else fail "repository-specific policy uses REPO.md naming"; fi
+assert_contains "$REPO_POLICY" "# REPO.md" "repository policy: has canonical repository filename heading"
 assert_contains "$REPO_POLICY" '## `plex-clear-watchlist/`' "repository policy: contains Plex subtree guidance"
 assert_contains "$REPO_POLICY" 'Code changes for this subtree are handed over on `dev`' "repository policy: preserves Plex dev rule"
 if [ ! -e "$PLEX_AGENTS" ]; then pass "nested Plex AGENTS.md is consolidated"; else fail "nested Plex AGENTS.md is consolidated"; fi
