@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # Tests for PR-changed configuration and documentation files.
 # Validates YAML syntax, JSON structure, GitHub workflow fields, and Markdown content.
-set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PASS=0
@@ -34,7 +33,7 @@ for f in \
     ".github/ISSUE_TEMPLATE/bug_report.yml" \
     ".github/ISSUE_TEMPLATE/config.yml" \
     ".github/ISSUE_TEMPLATE/feature_request.yml" \
-    ".github/workflows/ci.yml" \
+    ".github/workflows/ci.yml"
 do
     full="$REPO_ROOT/$f"
     if python3 -c "import yaml; yaml.safe_load(open('$full'))" 2>/dev/null; then pass "$f is valid YAML"; else fail "$f is valid YAML"; fi
@@ -96,7 +95,6 @@ assert_yaml_field "$CI" "data['jobs']['required']['runs-on']" "ubuntu-latest" "c
 assert_yaml_field "$CI" "str(any('ruff check src/' in str(s.get('run','')) and 'plex-clear-watchlist/' not in str(s.get('run','')) for s in data['jobs']['required']['steps']))" "True" "ci.yml: Ruff preserves established root src scope"
 assert_yaml_field "$CI" "str(any('python -m compileall -q src plex-clear-watchlist' in str(s.get('run','')) for s in data['jobs']['required']['steps']))" "True" "ci.yml: compiles both Python trees"
 assert_yaml_field "$CI" "str(any('bash tests/test_pr_changes.sh' in str(s.get('run','')) for s in data['jobs']['required']['steps']))" "True" "ci.yml: runs repository test harness"
-
 
 echo "=== Agent policy: central pointer and repository-specific contract ==="
 AGENTS="$REPO_ROOT/AGENTS.md"
