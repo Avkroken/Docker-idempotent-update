@@ -117,8 +117,9 @@ assert_not_contains "$AGENTS" "<!-- AVKROKEN-COMMON:START -->" "AGENTS.md: no lo
 assert_not_contains "$AGENTS" "## Repository-specifika instruktioner" "AGENTS.md: contains no repository-specific policy"
 if [ -f "$REPO_POLICY" ]; then pass "repository-specific policy uses REPO.md naming"; else fail "repository-specific policy uses REPO.md naming"; fi
 assert_contains "$REPO_POLICY" "# REPO.md" "repository policy: has canonical repository filename heading"
-assert_contains "$REPO_POLICY" '## `plex-clear-watchlist/`' "repository policy: contains Plex subtree guidance"
-assert_contains "$REPO_POLICY" 'Code changes for this subtree are handed over on `dev`' "repository policy: preserves Plex dev rule"
+assert_contains "$REPO_POLICY" "plex-clear-watchlist" "repository policy: preserves Plex subtree safety guidance"
+assert_contains "$REPO_POLICY" "--dry-run" "repository policy: preserves side-effect-free Plex dry-run invariant"
+assert_not_contains "$REPO_POLICY" 'handed over on `dev`' "repository policy: no permanent Plex dev handoff rule"
 if [ ! -e "$PLEX_AGENTS" ]; then pass "nested Plex AGENTS.md is consolidated"; else fail "nested Plex AGENTS.md is consolidated"; fi
 assert_not_contains "$AGENTS" "MERGE_POLICY.md" "AGENTS.md: does not depend on a parallel merge policy file"
 assert_not_contains "$AGENTS" "Ownership Map" "AGENTS.md: lacks ownership map"
