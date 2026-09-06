@@ -1,19 +1,15 @@
 # REPO.md
 
-This repository performs Docker maintenance: pull images, recreate changed containers, synchronize backups and report meaningful changes. `plex-clear-watchlist/` is a small one-shot Plex maintenance tool in the same repository.
+Förrådet sköter Docker-underhåll: hämtar images, återskapar ändrade containers, synkroniserar backups och rapporterar relevanta förändringar. `plex-clear-watchlist/` är ett separat engångsverktyg för Plex-underhåll.
 
-## Invariants
+## Invarians
 
-- Secrets come from environment variables; never hardcode credentials or expose them in reports/logs.
-- Prefer the Python standard library and existing project mechanisms over new dependencies.
-- Preserve best-effort error reporting redaction in `src/github_report.py`.
-- The `plex-clear-watchlist` tool's `--dry-run` mode must remain side-effect free and `PLEX_TOKEN` must remain external to the image/repository.
-- Use the normal short-lived branch + pull-request flow from the central policy for all code in this repository; no permanent `dev` handoff branch is required.
+- Hemligheter kommer från miljövariabler och får inte hårdkodas eller exponeras i rapporter eller loggar.
+- Föredra Python-standardbiblioteket och befintliga projektmekanismer framför nya beroenden.
+- Bevara redigering av känslig information i felrapporteringen i `src/github_report.py`.
+- `plex-clear-watchlist --dry-run` får inte ha sidoeffekter.
+- `PLEX_TOKEN` ska hållas utanför image och förråd.
 
-## Validation
+## Validering
 
-Run the relevant tests for changed Python code. For container changes, validate with Docker/Compose when practical.
-
-The live repository rules currently require `CI / required` and `docker`. Do not rename a required check without updating and verifying the live ruleset in the same migration.
-
-Pin third-party GitHub Actions to full commit SHAs.
+Kör relevanta tester för ändrad Python-kod. Vid containerändringar, validera med Docker/Compose när det är relevant.
