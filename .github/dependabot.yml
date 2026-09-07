@@ -1,48 +1,26 @@
+# To get started with Dependabot version updates, you'll need to specify which
+# package ecosystems to update and where the package manifests are located.
+# Please see the documentation for all configuration options:
+# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+
 version: 2
 updates:
   - package-ecosystem: "github-actions"
-    assignees: ["blixten85"]
     directory: "/"
     schedule:
-      interval: "daily"
-      time: "01:00"
-      timezone: "Europe/Stockholm"
-    groups:
-      actions-patch-minor:
-        update-types: ["minor", "patch"]
+      interval: "weekly"
 
-  # requirements.txt finns i plex-clear-watchlist/. Roten har inga
-  # pip-beroenden — src/ kör på standardbiblioteket.
   - package-ecosystem: "pip"
-    assignees: ["blixten85"]
-    directories:
-      - "/plex-clear-watchlist"
+    directory: "/plex-clear-watchlist"
     schedule:
-      interval: "daily"
-      time: "01:10"
-      timezone: "Europe/Stockholm"
-    groups:
-      pip-patch-minor:
-        update-types: ["minor", "patch"]
+      interval: "weekly"
 
   - package-ecosystem: "docker"
-    assignees: ["blixten85"]
     directory: "/plex-clear-watchlist"
     schedule:
-      interval: "daily"
-      time: "01:20"
-      timezone: "Europe/Stockholm"
-    groups:
-      docker-patch-minor:
-        update-types: ["minor", "patch"]
+      interval: "weekly"
 
   - package-ecosystem: "docker-compose"
-    assignees: ["blixten85"]
     directory: "/plex-clear-watchlist"
     schedule:
-      interval: "daily"
-      time: "01:30"
-      timezone: "Europe/Stockholm"
-    groups:
-      docker-compose-patch-minor:
-        update-types: ["minor", "patch"]
+      interval: "weekly"
