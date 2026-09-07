@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.3.5](https://github.com/Avkroken/Docker-idempotent-update/compare/v3.3.4...v3.3.5) (2026-09-07)
+
+
+### Documentation
+
+* document repository governance ([511e90b](https://github.com/Avkroken/Docker-idempotent-update/commit/511e90b4cc023a5b51f5554456279a91b4d6f882))
+* dokumentera repository-styrning ([#435](https://github.com/Avkroken/Docker-idempotent-update/issues/435)) ([511e90b](https://github.com/Avkroken/Docker-idempotent-update/commit/511e90b4cc023a5b51f5554456279a91b4d6f882))
+
 ## [3.3.4](https://github.com/Avkroken/Docker-idempotent-update/compare/v3.3.3...v3.3.4) (2026-09-06)
 
 
