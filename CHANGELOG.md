@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.3.4](https://github.com/Avkroken/Docker-idempotent-update/compare/v3.3.3...v3.3.4) (2026-09-06)
+
+
+### Documentation
+
+* remove duplicated GitHub governance ([16fe3b7](https://github.com/Avkroken/Docker-idempotent-update/commit/16fe3b7d248a7145a03209e5722faea88470a901))
+* rensa duplicerad GitHub-governance ([#433](https://github.com/Avkroken/Docker-idempotent-update/issues/433)) ([16fe3b7](https://github.com/Avkroken/Docker-idempotent-update/commit/16fe3b7d248a7145a03209e5722faea88470a901))
+
 ## [3.3.3](https://github.com/Avkroken/Docker-idempotent-update/compare/v3.3.2...v3.3.3) (2026-09-06)
 
 
