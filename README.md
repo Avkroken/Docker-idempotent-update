@@ -1,6 +1,5 @@
 # docker-idempotent-update
 
-[![CI](https://github.com/Avkroken/Docker-idempotent-update/actions/workflows/ci.yml/badge.svg)](https://github.com/Avkroken/Docker-idempotent-update/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/Avkroken/Docker-idempotent-update)](https://github.com/Avkroken/Docker-idempotent-update/releases)
 [![License](https://img.shields.io/github/license/Avkroken/Docker-idempotent-update)](LICENSE)
 
