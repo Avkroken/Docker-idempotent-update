@@ -25,7 +25,13 @@ assert set(workflows['python-app.yml']['jobs']) == {'build'}
 assert workflows['dependency-review.yml']['name'] == 'Dependency review'
 assert set(workflows['dependency-review.yml']['jobs']) == {'dependency-review'}
 assert workflows['docker-publish.yml']['name'] == 'Docker'
-assert set(workflows['docker-publish.yml']['jobs']) == {'build'}
+assert set(workflows['docker-publish.yml']['jobs']) == {'build', 'publish'}
+assert workflows['docker-publish.yml']['jobs']['build']['permissions'] == {'contents': 'read'}
+assert workflows['docker-publish.yml']['jobs']['publish']['permissions'] == {
+    'contents': 'read',
+    'packages': 'write',
+    'id-token': 'write',
+}
 assert workflows['docker-publish.yml']['env']['IMAGE_NAME'] == 'avkroken/plex-clear-watchlist'
 assert workflows['docker-publish.yml']['jobs']['build']['permissions'] == {
     'contents': 'read',
@@ -59,9 +65,18 @@ assert ruleset['conditions']['ref_name']['include'] == ['~DEFAULT_BRANCH']
 assert [rule['type'] for rule in ruleset['rules']] == ['required_status_checks']
 contexts = ruleset['rules'][0]['parameters']['required_status_checks']
 assert [item['context'] for item in contexts] == [
-    'Analyze (python)',
-    'Analyze (actions)',
+    'Python application / build',
+    'Dependency review / dependency-review',
 ]
+
+for workflow in workflows.values():
+    for job in workflow['jobs'].values():
+        for step in job.get('steps', []):
+            if 'uses' in step:
+                ref = step['uses'].rsplit('@', 1)[1]
+                assert len(ref) == 40 and all(char in '0123456789abcdef' for char in ref)
+            if step.get('uses', '').startswith('actions/checkout@'):
+                assert step.get('with', {}).get('persist-credentials') is False
 PY
 
 python3 -m compileall -q src plex-clear-watchlist
