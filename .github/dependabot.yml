@@ -1,0 +1,16 @@
+# Based on GitHub's official Dependabot configuration example:
+# https://github.com/actions/starter-workflows/blob/main/.github/dependabot.yml
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /plex-clear-watchlist
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /plex-clear-watchlist
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
