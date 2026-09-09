@@ -24,24 +24,23 @@ assert workflows['python-app.yml']['name'] == 'Python application'
 assert set(workflows['python-app.yml']['jobs']) == {'build'}
 assert workflows['dependency-review.yml']['name'] == 'Dependency review'
 assert set(workflows['dependency-review.yml']['jobs']) == {'dependency-review'}
-docker_workflow = workflows['docker-publish.yml']
-assert docker_workflow['name'] == 'Docker'
-assert set(docker_workflow['jobs']) == {'build', 'publish'}
-assert docker_workflow['jobs']['build']['if'] == "github.event_name == 'pull_request'"
-assert docker_workflow['jobs']['build']['permissions'] == {'contents': 'read'}
-assert docker_workflow['jobs']['publish']['if'] == "github.event_name == 'push' || github.event_name == 'schedule'"
-assert docker_workflow['jobs']['publish']['permissions'] == {
-    'contents': 'read',
-    'packages': 'write',
-}
-assert docker_workflow['env']['IMAGE_NAME'] == 'avkroken/plex-clear-watchlist'
-docker_uses = {
-    step['uses'] for step in docker_workflow['jobs']['build']['steps']
-    if 'uses' in step
-}
-assert docker_uses == {
+assert workflows['docker-publish.yml']['name'] == 'Docker'
+assert set(workflows['docker-publish.yml']['jobs']) == {'build', 'publish'}
+build = workflows['docker-publish.yml']['jobs']['build']
+publish = workflows['docker-publish.yml']['jobs']['publish']
+assert build['permissions'] == {'contents': 'read'}
+assert publish['permissions'] == {'contents': 'read', 'packages': 'write'}
+assert workflows['docker-publish.yml']['env']['IMAGE_NAME'] == 'avkroken/plex-clear-watchlist'
+assert {step['uses'] for step in build['steps'] if 'uses' in step} == {
     'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
     'docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e',
+    'docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a',
+}
+assert {step['uses'] for step in publish['steps'] if 'uses' in step} == {
+    'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
+    'docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e',
+    'docker/login-action@dbcb813823bdd20940b903addbd779551569679f',
+    'docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302',
     'docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a',
 }
 
@@ -61,22 +60,18 @@ assert ruleset['conditions']['ref_name']['include'] == ['~DEFAULT_BRANCH']
 assert [rule['type'] for rule in ruleset['rules']] == ['required_status_checks']
 contexts = ruleset['rules'][0]['parameters']['required_status_checks']
 assert [item['context'] for item in contexts] == [
-    'Python application / build',
-    'Dependency review / dependency-review',
+    'build',
+    'dependency-review',
 ]
 
-pull_request_jobs = [
-    workflows['dependency-review.yml']['jobs']['dependency-review'],
-    docker_workflow['jobs']['build'],
-    workflows['python-app.yml']['jobs']['build'],
-]
-for job in pull_request_jobs:
-    for step in job.get('steps', []):
-        if 'uses' in step:
-            ref = step['uses'].rsplit('@', 1)[1]
-            assert len(ref) == 40 and all(char in '0123456789abcdef' for char in ref)
-        if step.get('uses', '').startswith('actions/checkout@'):
-            assert step.get('with', {}).get('persist-credentials') is False
+for workflow in workflows.values():
+    for job in workflow['jobs'].values():
+        for step in job.get('steps', []):
+            if 'uses' in step:
+                ref = step['uses'].rsplit('@', 1)[1]
+                assert len(ref) == 40 and all(char in '0123456789abcdef' for char in ref)
+            if step.get('uses', '').startswith('actions/checkout@'):
+                assert step.get('with', {}).get('persist-credentials') is False
 PY
 
 python3 -m compileall -q src plex-clear-watchlist

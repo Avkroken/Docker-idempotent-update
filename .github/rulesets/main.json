@@ -17,10 +17,10 @@
       "parameters": {
         "required_status_checks": [
           {
-            "context": "Python application / build"
+            "context": "build"
           },
           {
-            "context": "Dependency review / dependency-review"
+            "context": "dependency-review"
           }
         ],
         "strict_required_status_checks_policy": true,
