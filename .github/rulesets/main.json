@@ -1,0 +1,31 @@
+{
+  "name": "Repository checks for main",
+  "target": "branch",
+  "enforcement": "active",
+  "bypass_actors": [],
+  "conditions": {
+    "ref_name": {
+      "exclude": [],
+      "include": [
+        "~DEFAULT_BRANCH"
+      ]
+    }
+  },
+  "rules": [
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "required_status_checks": [
+          {
+            "context": "build"
+          },
+          {
+            "context": "dependency-review"
+          }
+        ],
+        "strict_required_status_checks_policy": true,
+        "do_not_enforce_on_create": true
+      }
+    }
+  ]
+}

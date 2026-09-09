@@ -1,125 +1,77 @@
 #!/usr/bin/env bash
-# Tests for PR-changed configuration and documentation files.
-# Validates YAML syntax, JSON structure, GitHub workflow fields, and Markdown content.
+set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PASS=0
-FAIL=0
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
 
-pass() { echo "  PASS: $1"; PASS=$((PASS + 1)); }
-fail() { echo "  FAIL: $1"; FAIL=$((FAIL + 1)); }
+python3 - <<'PY'
+import json
+from pathlib import Path
 
-assert_contains() {
-    local file="$1" pattern="$2" label="$3"
-    if grep -qF -- "$pattern" "$file"; then pass "$label"; else fail "$label (pattern not found: $pattern)"; fi
+import yaml
+
+workflow_dir = Path('.github/workflows')
+workflows = {path.name: yaml.safe_load(path.read_text()) for path in workflow_dir.glob('*.yml')}
+assert set(workflows) == {'dependency-review.yml', 'docker-publish.yml', 'python-app.yml'}
+
+for filename, workflow in workflows.items():
+    permissions = workflow['permissions'] if 'permissions' in workflow else workflow['jobs']['build']['permissions']
+    assert permissions['contents'] == 'read', filename
+    assert 'pull_request' in workflow[True], filename
+    assert workflow[True]['pull_request']['branches'] == ['main'], filename
+
+assert workflows['python-app.yml']['name'] == 'Python application'
+assert set(workflows['python-app.yml']['jobs']) == {'build'}
+assert workflows['dependency-review.yml']['name'] == 'Dependency review'
+assert set(workflows['dependency-review.yml']['jobs']) == {'dependency-review'}
+assert workflows['docker-publish.yml']['name'] == 'Docker'
+assert set(workflows['docker-publish.yml']['jobs']) == {'build', 'publish'}
+build = workflows['docker-publish.yml']['jobs']['build']
+publish = workflows['docker-publish.yml']['jobs']['publish']
+assert build['permissions'] == {'contents': 'read'}
+assert publish['permissions'] == {'contents': 'read', 'packages': 'write'}
+assert workflows['docker-publish.yml']['env']['IMAGE_NAME'] == 'avkroken/plex-clear-watchlist'
+assert {step['uses'] for step in build['steps'] if 'uses' in step} == {
+    'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
+    'docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e',
+    'docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a',
+}
+assert {step['uses'] for step in publish['steps'] if 'uses' in step} == {
+    'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
+    'docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e',
+    'docker/login-action@dbcb813823bdd20940b903addbd779551569679f',
+    'docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302',
+    'docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a',
 }
 
-assert_not_contains() {
-    local file="$1" pattern="$2" label="$3"
-    if ! grep -qF -- "$pattern" "$file"; then pass "$label"; else fail "$label (unexpected pattern found: $pattern)"; fi
+with Path('.github/dependabot.yml').open() as stream:
+    dependabot = yaml.safe_load(stream)
+assert dependabot['version'] == 2
+assert {(item['package-ecosystem'], item['directory']) for item in dependabot['updates']} == {
+    ('pip', '/plex-clear-watchlist'),
+    ('docker', '/plex-clear-watchlist'),
+    ('github-actions', '/'),
 }
 
-assert_yaml_field() {
-    local file="$1" py_expr="$2" expected="$3" label="$4" actual
-    if ! actual="$(python3 -c "import yaml; data = yaml.safe_load(open('$file')); result = $py_expr; print(str(result))" 2>/dev/null)"; then
-        fail "$label (YAML/Python evaluation failed)"
-        return
-    fi
-    if [ "$actual" = "$expected" ]; then pass "$label"; else fail "$label (expected '$expected', got '$actual')"; fi
-}
+with Path('.github/rulesets/main.json').open() as stream:
+    ruleset = json.load(stream)
+assert ruleset['target'] == 'branch'
+assert ruleset['conditions']['ref_name']['include'] == ['~DEFAULT_BRANCH']
+assert [rule['type'] for rule in ruleset['rules']] == ['required_status_checks']
+contexts = ruleset['rules'][0]['parameters']['required_status_checks']
+assert [item['context'] for item in contexts] == [
+    'build',
+    'dependency-review',
+]
 
-echo "=== YAML syntax validation ==="
-for f in \
-    ".github/ISSUE_TEMPLATE/bug_report.yml" \
-    ".github/ISSUE_TEMPLATE/config.yml" \
-    ".github/ISSUE_TEMPLATE/feature_request.yml" \
-    ".github/workflows/ci.yml"
-do
-    full="$REPO_ROOT/$f"
-    if python3 -c "import yaml; yaml.safe_load(open('$full'))" 2>/dev/null; then pass "$f is valid YAML"; else fail "$f is valid YAML"; fi
-done
+for workflow in workflows.values():
+    for job in workflow['jobs'].values():
+        for step in job.get('steps', []):
+            if 'uses' in step:
+                ref = step['uses'].rsplit('@', 1)[1]
+                assert len(ref) == 40 and all(char in '0123456789abcdef' for char in ref)
+            if step.get('uses', '').startswith('actions/checkout@'):
+                assert step.get('with', {}).get('persist-credentials') is False
+PY
 
-echo "=== bug_report.yml: GitHub issue form structure ==="
-BUG="$REPO_ROOT/.github/ISSUE_TEMPLATE/bug_report.yml"
-assert_yaml_field "$BUG" "data['name']" "Bug report" "bug_report: name is 'Bug report'"
-assert_yaml_field "$BUG" "data['title']" "bug: " "bug_report: title prefix is 'bug: '"
-assert_yaml_field "$BUG" "data['labels'][0]" "bug" "bug_report: first label is 'bug'"
-assert_yaml_field "$BUG" "str([f['id'] for f in data['body'] if f.get('type')=='textarea'])" "['description', 'steps', 'expected', 'environment']" "bug_report: textarea field IDs are description, steps, expected, environment"
-assert_yaml_field "$BUG" "str([f['id'] for f in data['body'] if f.get('validations', {}).get('required')])" "['description', 'steps', 'expected']" "bug_report: required fields are description, steps, expected"
-assert_yaml_field "$BUG" "str(any(f.get('validations', {}).get('required') for f in data['body'] if f.get('id')=='environment'))" "False" "bug_report: environment field is optional (not required)"
-assert_contains "$BUG" "1." "bug_report: steps placeholder starts numbered list"
-
-echo "=== config.yml: issue template config ==="
-CONFIG="$REPO_ROOT/.github/ISSUE_TEMPLATE/config.yml"
-assert_yaml_field "$CONFIG" "data['blank_issues_enabled']" "False" "config: blank_issues_enabled is false"
-assert_yaml_field "$CONFIG" "str(data['contact_links'])" "[]" "config: contact_links is empty list"
-
-echo "=== feature_request.yml: GitHub issue form structure ==="
-FEAT="$REPO_ROOT/.github/ISSUE_TEMPLATE/feature_request.yml"
-assert_yaml_field "$FEAT" "data['name']" "Feature request" "feature_request: name is 'Feature request'"
-assert_yaml_field "$FEAT" "data['title']" "feat: " "feature_request: title prefix is 'feat: '"
-assert_yaml_field "$FEAT" "data['labels'][0]" "enhancement" "feature_request: first label is 'enhancement'"
-assert_yaml_field "$FEAT" "str([f['id'] for f in data['body'] if f.get('validations', {}).get('required')])" "['problem', 'proposal']" "feature_request: required fields are problem and proposal"
-assert_yaml_field "$FEAT" "str(any(f.get('id')=='alternatives' for f in data['body']))" "True" "feature_request: alternatives field exists"
-assert_yaml_field "$FEAT" "str(any(f.get('validations', {}).get('required') for f in data['body'] if f.get('id')=='alternatives'))" "False" "feature_request: alternatives field is optional"
-
-echo "=== pull_request_template.md: required sections and checklist ==="
-PRTEMPLATE="$REPO_ROOT/.github/pull_request_template.md"
-assert_contains "$PRTEMPLATE" "## Summary" "pr_template: has Summary section"
-assert_contains "$PRTEMPLATE" "## Testing" "pr_template: has Testing section"
-assert_contains "$PRTEMPLATE" "## Checklist" "pr_template: has Checklist section"
-assert_contains "$PRTEMPLATE" "Tests pass locally" "pr_template: has 'Tests pass locally' checklist item"
-assert_contains "$PRTEMPLATE" "PR is focused and isolated" "pr_template: has 'PR is focused and isolated' checklist item"
-assert_contains "$PRTEMPLATE" "No unrelated changes are included" "pr_template: has 'No unrelated changes are included' checklist item"
-assert_contains "$PRTEMPLATE" "No credentials or secrets are committed" "pr_template: has 'No credentials or secrets are committed' checklist item"
-assert_contains "$PRTEMPLATE" "- [ ]" "pr_template: uses unchecked task list syntax"
-assert_contains "$PRTEMPLATE" "-" "pr_template: Summary section has content placeholder"
-
-echo "=== dependabot.yml: Dependabot configuration ==="
-DEPENDABOT="$REPO_ROOT/.github/dependabot.yml"
-if python3 -c "import yaml; yaml.safe_load(open('$DEPENDABOT'))" 2>/dev/null; then pass "dependabot.yml is valid YAML"; else fail "dependabot.yml is valid YAML"; fi
-assert_yaml_field "$DEPENDABOT" "data['version']" "2" "dependabot.yml: version is 2"
-assert_yaml_field "$DEPENDABOT" "str('github-actions' in [u['package-ecosystem'] for u in data['updates']])" "True" "dependabot.yml: github-actions ecosystem present"
-assert_yaml_field "$DEPENDABOT" "str(all('schedule' in u and 'interval' in u['schedule'] for u in data['updates']))" "True" "dependabot.yml: all updates have schedule.interval"
-
-echo "=== ci.yml: GitHub Actions workflow structure ==="
-CI="$REPO_ROOT/.github/workflows/ci.yml"
-assert_yaml_field "$CI" "data['name']" "CI" "ci.yml: workflow name is CI"
-assert_yaml_field "$CI" "str('pull_request' in data[True])" "True" "ci.yml: triggered on pull_request"
-assert_yaml_field "$CI" "str('merge_group' in data[True])" "True" "ci.yml: triggered on merge_group"
-assert_yaml_field "$CI" "str(data[True]['push']['branches'])" "['main']" "ci.yml: push trigger limited to main branch"
-assert_yaml_field "$CI" "data['permissions']['contents']" "read" "ci.yml: permissions.contents is read"
-assert_yaml_field "$CI" "str(set(data['jobs']) == {'required'})" "True" "ci.yml: defines only required job"
-assert_yaml_field "$CI" "data['jobs']['required']['name']" "CI / required" "ci.yml: required context is stable"
-assert_yaml_field "$CI" "data['jobs']['required']['runs-on']" "ubuntu-latest" "ci.yml: required job runs on ubuntu-latest"
-assert_yaml_field "$CI" "str(any('ruff check src/' in str(s.get('run','')) and 'plex-clear-watchlist/' not in str(s.get('run','')) for s in data['jobs']['required']['steps']))" "True" "ci.yml: Ruff preserves established root src scope"
-assert_yaml_field "$CI" "str(any('python -m compileall -q src plex-clear-watchlist' in str(s.get('run','')) for s in data['jobs']['required']['steps']))" "True" "ci.yml: compiles both Python trees"
-assert_yaml_field "$CI" "str(any('bash tests/test_pr_changes.sh' in str(s.get('run','')) for s in data['jobs']['required']['steps']))" "True" "ci.yml: runs repository test harness"
-
-echo "=== Agent policy: central pointer and repository-specific contract ==="
-AGENTS="$REPO_ROOT/AGENTS.md"
-REPO_POLICY="$REPO_ROOT/REPO.md"
-PLEX_AGENTS="$REPO_ROOT/plex-clear-watchlist/AGENTS.md"
-assert_contains "$AGENTS" "https://github.com/Avkroken/.github/blob/main/AGENTS.md" "AGENTS.md: points to canonical Avkroken policy"
-assert_contains "$AGENTS" "Read and follow that document completely before making changes in this repository." "AGENTS.md: requires canonical policy to be read"
-assert_not_contains "$AGENTS" "<!-- AVKROKEN-COMMON:START -->" "AGENTS.md: no longer embeds managed common policy"
-assert_not_contains "$AGENTS" "## Repository-specifika instruktioner" "AGENTS.md: contains no repository-specific policy"
-if [ -f "$REPO_POLICY" ]; then pass "repository-specific policy uses REPO.md naming"; else fail "repository-specific policy uses REPO.md naming"; fi
-assert_contains "$REPO_POLICY" "# REPO.md" "repository policy: has canonical repository filename heading"
-assert_contains "$REPO_POLICY" "plex-clear-watchlist" "repository policy: preserves Plex subtree safety guidance"
-assert_contains "$REPO_POLICY" "--dry-run" "repository policy: preserves side-effect-free Plex dry-run invariant"
-assert_not_contains "$REPO_POLICY" 'handed over on `dev`' "repository policy: no permanent Plex dev handoff rule"
-if [ ! -e "$PLEX_AGENTS" ]; then pass "nested Plex AGENTS.md is consolidated"; else fail "nested Plex AGENTS.md is consolidated"; fi
-assert_not_contains "$AGENTS" "MERGE_POLICY.md" "AGENTS.md: does not depend on a parallel merge policy file"
-assert_not_contains "$AGENTS" "Ownership Map" "AGENTS.md: lacks ownership map"
-
-echo "=== CLAUDE.md: pointer contract ==="
-CLAUDEMD="$REPO_ROOT/CLAUDE.md"
-assert_contains "$CLAUDEMD" "Läs [AGENTS.md](AGENTS.md)" "CLAUDE.md: points to authoritative AGENTS.md"
-assert_contains "$CLAUDEMD" "bara en pekare" "CLAUDE.md: remains a pointer file"
-assert_contains "$CLAUDEMD" "All projektvägledning står där" "CLAUDE.md: delegates project guidance to AGENTS.md"
-assert_not_contains "$CLAUDEMD" "## Tech Stack" "CLAUDE.md: does not duplicate project guidance"
-
-echo ""
-echo "Results: $PASS passed, $FAIL failed"
-if [ "$FAIL" -gt 0 ]; then exit 1; fi
+python3 -m compileall -q src plex-clear-watchlist

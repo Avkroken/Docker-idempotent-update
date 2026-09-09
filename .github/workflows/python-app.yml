@@ -1,0 +1,38 @@
+# This workflow is based on GitHub's official Python application starter workflow:
+# https://github.com/actions/starter-workflows/blob/main/ci/python-app.yml
+name: Python application
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest PyYAML
+          pip install -r plex-clear-watchlist/requirements.txt
+      - name: Lint with flake8
+        run: |
+          # Stop the build for Python syntax errors or undefined names.
+          flake8 src plex-clear-watchlist --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Report all remaining style findings without failing the build.
+          flake8 src plex-clear-watchlist --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: Test repository configuration
+        run: bash tests/test_pr_changes.sh
