@@ -33,6 +33,21 @@ assert workflows['docker-publish.yml']['jobs']['publish']['permissions'] == {
     'id-token': 'write',
 }
 assert workflows['docker-publish.yml']['env']['IMAGE_NAME'] == 'avkroken/plex-clear-watchlist'
+assert workflows['docker-publish.yml']['jobs']['build']['permissions'] == {
+    'contents': 'read',
+    'packages': 'write',
+}
+docker_uses = {
+    step['uses'] for step in workflows['docker-publish.yml']['jobs']['build']['steps']
+    if 'uses' in step
+}
+assert docker_uses == {
+    'actions/checkout@v7.0.1',
+    'docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e',
+    'docker/login-action@dbcb813823bdd20940b903addbd779551569679f',
+    'docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302',
+    'docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a',
+}
 
 with Path('.github/dependabot.yml').open() as stream:
     dependabot = yaml.safe_load(stream)
