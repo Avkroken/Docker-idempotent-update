@@ -163,21 +163,10 @@ def _socket_update(cfg: Config) -> list[str]:
     return updated
 
 
-def _recreate_container(cid: str, image: str, name: str) -> bool:
-    result = subprocess.run(
-        ["docker", "inspect", cid], capture_output=True, text=True, check=False
-    )
-    if result.returncode != 0:
-        return False
-    try:
-        info = json.loads(result.stdout)[0]
-    except (ValueError, IndexError):
-        return False
-
+def _append_runtime_options(cmd: list[str], info: dict) -> list[str]:
+    """Append inspect-derived options needed to faithfully recreate a container."""
     hc = info.get("HostConfig") or {}
     container_cfg = info.get("Config") or {}
-
-    cmd = ["docker", "run", "--detach", "--name", name]
 
     rp = hc.get("RestartPolicy") or {}
     rp_name = rp.get("Name") or "no"
@@ -192,11 +181,34 @@ def _recreate_container(cid: str, image: str, name: str) -> bool:
     if nm and nm not in ("default", "bridge"):
         cmd += ["--network", nm]
 
+    if container_cfg.get("User"):
+        cmd += ["--user", str(container_cfg["User"])]
+    if container_cfg.get("WorkingDir"):
+        cmd += ["--workdir", str(container_cfg["WorkingDir"])]
+
     for env_var in container_cfg.get("Env") or []:
         cmd += ["-e", env_var]
 
+    bind_targets: set[str] = set()
     for bind in hc.get("Binds") or []:
         cmd += ["-v", bind]
+        parts = bind.split(":")
+        if len(parts) >= 2:
+            bind_targets.add(parts[1])
+
+    for mount in info.get("Mounts") or []:
+        mount_type = mount.get("Type")
+        target = mount.get("Destination")
+        source = mount.get("Name") or mount.get("Source")
+        if not target or target in bind_targets or mount_type not in ("volume", "tmpfs"):
+            continue
+        if mount_type == "volume" and source:
+            spec = f"{source}:{target}"
+            if not mount.get("RW", True):
+                spec += ":ro"
+            cmd += ["-v", spec]
+        elif mount_type == "tmpfs":
+            cmd += ["--tmpfs", target]
 
     for cport, bindings in (hc.get("PortBindings") or {}).items():
         for b in bindings or []:
@@ -207,14 +219,168 @@ def _recreate_container(cid: str, image: str, name: str) -> bool:
     for k, v in (container_cfg.get("Labels") or {}).items():
         cmd += ["-l", f"{k}={v}"]
 
-    cmd.append(image)
+    for cap in hc.get("CapAdd") or []:
+        cmd += ["--cap-add", cap]
+    for cap in hc.get("CapDrop") or []:
+        cmd += ["--cap-drop", cap]
+    if hc.get("Privileged"):
+        cmd.append("--privileged")
+    if hc.get("ReadonlyRootfs"):
+        cmd.append("--read-only")
+    if hc.get("Init"):
+        cmd.append("--init")
 
-    subprocess.run(["docker", "stop", cid], capture_output=True, check=False)
-    subprocess.run(["docker", "rm", cid], capture_output=True, check=False)
-    r = subprocess.run(cmd, capture_output=True, text=True, check=False)
-    if r.returncode != 0:
-        log.error("Failed to recreate %s: %s", name, r.stderr.strip())
+    for device in hc.get("Devices") or []:
+        src = device.get("PathOnHost")
+        dst = device.get("PathInContainer")
+        perms = device.get("CgroupPermissions") or "rwm"
+        if src and dst:
+            cmd += ["--device", f"{src}:{dst}:{perms}"]
+
+    for dns in hc.get("Dns") or []:
+        cmd += ["--dns", dns]
+    for dns_search in hc.get("DnsSearch") or []:
+        cmd += ["--dns-search", dns_search]
+    for host in hc.get("ExtraHosts") or []:
+        cmd += ["--add-host", host]
+    for security_opt in hc.get("SecurityOpt") or []:
+        cmd += ["--security-opt", security_opt]
+    for key, value in (hc.get("Sysctls") or {}).items():
+        cmd += ["--sysctl", f"{key}={value}"]
+    for target, options in (hc.get("Tmpfs") or {}).items():
+        spec = target if not options else f"{target}:{options}"
+        cmd += ["--tmpfs", spec]
+
+    memory = hc.get("Memory") or 0
+    if memory > 0:
+        cmd += ["--memory", str(memory)]
+    nano_cpus = hc.get("NanoCpus") or 0
+    if nano_cpus > 0:
+        cmd += ["--cpus", str(nano_cpus / 1_000_000_000)]
+    cpu_shares = hc.get("CpuShares") or 0
+    if cpu_shares > 0:
+        cmd += ["--cpu-shares", str(cpu_shares)]
+    pids_limit = hc.get("PidsLimit")
+    if isinstance(pids_limit, int) and pids_limit > 0:
+        cmd += ["--pids-limit", str(pids_limit)]
+    shm_size = hc.get("ShmSize") or 0
+    if shm_size and shm_size != 64 * 1024 * 1024:
+        cmd += ["--shm-size", str(shm_size)]
+
+    log_cfg = hc.get("LogConfig") or {}
+    if log_cfg.get("Type") and log_cfg["Type"] != "json-file":
+        cmd += ["--log-driver", log_cfg["Type"]]
+    for key, value in (log_cfg.get("Config") or {}).items():
+        cmd += ["--log-opt", f"{key}={value}"]
+
+    if container_cfg.get("StopSignal"):
+        cmd += ["--stop-signal", container_cfg["StopSignal"]]
+
+    return cmd
+
+
+def _append_process_config(cmd: list[str], info: dict) -> list[str]:
+    """Append the inspected entrypoint and command after the image name."""
+    container_cfg = info.get("Config") or {}
+    entrypoint = container_cfg.get("Entrypoint") or []
+    original_cmd = container_cfg.get("Cmd") or []
+
+    if isinstance(entrypoint, str):
+        entrypoint = [entrypoint]
+    if isinstance(original_cmd, str):
+        original_cmd = [original_cmd]
+
+    if entrypoint:
+        cmd[1:1] = ["--entrypoint", str(entrypoint[0])]
+        cmd.extend(str(item) for item in entrypoint[1:])
+    cmd.extend(str(item) for item in original_cmd)
+    return cmd
+
+
+def _restore_original(name: str, backup_name: str) -> None:
+    """Best-effort rollback to the stopped original container."""
+    subprocess.run(["docker", "rm", "-f", name], capture_output=True, check=False)
+    renamed = subprocess.run(
+        ["docker", "rename", backup_name, name], capture_output=True, text=True, check=False
+    )
+    if renamed.returncode != 0:
+        log.error("Rollback could not restore container name %s: %s", name, renamed.stderr.strip())
+        return
+    started = subprocess.run(
+        ["docker", "start", name], capture_output=True, text=True, check=False
+    )
+    if started.returncode != 0:
+        log.error("Rollback could not restart %s: %s", name, started.stderr.strip())
+
+
+def _recreate_container(cid: str, image: str, name: str) -> bool:
+    result = subprocess.run(
+        ["docker", "inspect", cid], capture_output=True, text=True, check=False
+    )
+    if result.returncode != 0:
         return False
+    try:
+        info = json.loads(result.stdout)[0]
+    except (ValueError, IndexError):
+        return False
+
+    backup_name = f"{name}.idempotent-backup-{cid[:12]}"
+    cmd = ["docker", "run", "--detach", "--name", name]
+    _append_runtime_options(cmd, info)
+
+    container_cfg = info.get("Config") or {}
+    entrypoint = container_cfg.get("Entrypoint") or []
+    if isinstance(entrypoint, str):
+        entrypoint = [entrypoint]
+    if entrypoint:
+        cmd += ["--entrypoint", str(entrypoint[0])]
+
+    cmd.append(image)
+    if entrypoint:
+        cmd.extend(str(item) for item in entrypoint[1:])
+    original_cmd = container_cfg.get("Cmd") or []
+    if isinstance(original_cmd, str):
+        original_cmd = [original_cmd]
+    cmd.extend(str(item) for item in original_cmd)
+
+    stopped = subprocess.run(
+        ["docker", "stop", cid], capture_output=True, text=True, check=False
+    )
+    if stopped.returncode != 0:
+        log.error("Failed to stop %s: %s", name, stopped.stderr.strip())
+        return False
+
+    renamed = subprocess.run(
+        ["docker", "rename", cid, backup_name], capture_output=True, text=True, check=False
+    )
+    if renamed.returncode != 0:
+        log.error("Failed to reserve rollback container for %s: %s", name, renamed.stderr.strip())
+        subprocess.run(["docker", "start", cid], capture_output=True, check=False)
+        return False
+
+    created = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    if created.returncode != 0:
+        log.error("Failed to recreate %s: %s; restoring original", name, created.stderr.strip())
+        _restore_original(name, backup_name)
+        return False
+
+    running = subprocess.run(
+        ["docker", "inspect", "--format={{.State.Running}}", name],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if running.returncode != 0 or running.stdout.strip().lower() != "true":
+        log.error("Replacement %s did not remain running; restoring original", name)
+        _restore_original(name, backup_name)
+        return False
+
+    removed = subprocess.run(
+        ["docker", "rm", backup_name], capture_output=True, text=True, check=False
+    )
+    if removed.returncode != 0:
+        log.warning("Replacement is running but rollback container %s could not be removed: %s", backup_name, removed.stderr.strip())
+
     return True
 
 
