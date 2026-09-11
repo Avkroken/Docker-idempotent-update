@@ -12,13 +12,26 @@ import yaml
 
 workflow_dir = Path('.github/workflows')
 workflows = {path.name: yaml.safe_load(path.read_text()) for path in workflow_dir.glob('*.yml')}
-assert set(workflows) == {'dependency-review.yml', 'docker-publish.yml', 'python-app.yml'}
+assert set(workflows) == {
+    'dependabot-automerge.yml',
+    'dependency-review.yml',
+    'docker-publish.yml',
+    'python-app.yml',
+}
 
-for filename, workflow in workflows.items():
+for filename in ('dependency-review.yml', 'docker-publish.yml', 'python-app.yml'):
+    workflow = workflows[filename]
     permissions = workflow['permissions'] if 'permissions' in workflow else workflow['jobs']['build']['permissions']
     assert permissions['contents'] == 'read', filename
     assert 'pull_request' in workflow[True], filename
     assert workflow[True]['pull_request']['branches'] == ['main'], filename
+
+automerge = workflows['dependabot-automerge.yml']
+assert automerge['name'] == 'Dependabot auto-merge'
+assert automerge[True] == 'pull_request'
+assert automerge['permissions'] == {'contents': 'write', 'pull-requests': 'write'}
+assert set(automerge['jobs']) == {'dependabot'}
+assert not any('uses' in step for step in automerge['jobs']['dependabot']['steps'])
 
 assert workflows['python-app.yml']['name'] == 'Python application'
 assert set(workflows['python-app.yml']['jobs']) == {'build'}
@@ -50,6 +63,7 @@ assert dependabot['version'] == 2
 assert {(item['package-ecosystem'], item['directory']) for item in dependabot['updates']} == {
     ('pip', '/plex-clear-watchlist'),
     ('docker', '/plex-clear-watchlist'),
+    ('docker-compose', '/plex-clear-watchlist'),
     ('github-actions', '/'),
 }
 
