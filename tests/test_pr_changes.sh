@@ -16,6 +16,7 @@ assert set(workflows) == {
     'dependabot-automerge.yml',
     'dependency-review.yml',
     'docker-publish.yml',
+    'labeler.yml',
     'python-app.yml',
 }
 
@@ -32,6 +33,16 @@ assert automerge[True] == 'pull_request'
 assert automerge['permissions'] == {'contents': 'write', 'pull-requests': 'write'}
 assert set(automerge['jobs']) == {'dependabot'}
 assert not any('uses' in step for step in automerge['jobs']['dependabot']['steps'])
+
+labeler = workflows['labeler.yml']
+assert labeler['name'] == 'Pull Request Labeler'
+assert labeler[True]['pull_request_target']['types'] == ['opened', 'synchronize', 'reopened']
+assert labeler['permissions'] == {
+    'contents': 'read',
+    'issues': 'write',
+    'pull-requests': 'write',
+}
+assert set(labeler['jobs']) == {'triage'}
 
 assert workflows['python-app.yml']['name'] == 'Python application'
 assert set(workflows['python-app.yml']['jobs']) == {'build'}
@@ -66,6 +77,10 @@ assert {(item['package-ecosystem'], item['directory']) for item in dependabot['u
     ('docker-compose', '/plex-clear-watchlist'),
     ('github-actions', '/'),
 }
+
+with Path('.github/labeler.yml').open() as stream:
+    labeler_config = yaml.safe_load(stream)
+assert set(labeler_config) == {'python', 'tests', 'docker', 'dependencies', 'github_actions'}
 
 with Path('.github/rulesets/main.json').open() as stream:
     ruleset = json.load(stream)
