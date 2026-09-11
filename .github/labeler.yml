@@ -1,0 +1,26 @@
+python:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/**/*.py"
+          - "plex-clear-watchlist/**/*.py"
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file: "tests/**"
+
+docker:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "plex-clear-watchlist/Dockerfile"
+          - "plex-clear-watchlist/docker-compose.yml"
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "plex-clear-watchlist/requirements*.txt"
+          - "plex-clear-watchlist/Dockerfile"
+          - "plex-clear-watchlist/docker-compose.yml"
+
+github_actions:
+  - changed-files:
+      - any-glob-to-any-file: ".github/**"
