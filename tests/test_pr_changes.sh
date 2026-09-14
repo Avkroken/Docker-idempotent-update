@@ -36,7 +36,12 @@ assert not any('uses' in step for step in automerge['jobs']['dependabot']['steps
 
 labeler = workflows['labeler.yml']
 assert labeler['name'] == 'Pull Request Labeler'
-assert labeler[True]['pull_request_target']['types'] == ['opened', 'synchronize', 'reopened']
+assert labeler[True]['pull_request_target']['types'] == [
+    'opened',
+    'synchronize',
+    'reopened',
+    'ready_for_review',
+]
 assert labeler['permissions'] == {
     'contents': 'read',
     'issues': 'write',
