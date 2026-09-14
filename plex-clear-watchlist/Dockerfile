@@ -9,11 +9,8 @@ FROM debian:stable-slim
 # nedan plockar upp rättningarna vid varje bygge. Med uppströms python-image
 # väntar man i stället på att den byggs om.
 #
-# Det avvecklar också fyndklassen som fällde scrapers bygge i augusti:
-# uppströms pip deklarerar sina vendrade kopior av setuptools och msgpack i
-# pip/_vendor/bom.cdx.json, som Trivy läser som installerade paket. Debians
-# python3-pip vendrar samma bibliotek men skickar ingen SBOM, och patchar dem
-# via apt.
+# Det minskar också risken från uppströms pips vendrade kopior av setuptools
+# och msgpack. Debians python3-pip levereras och patchas via apt.
 RUN apt-get update && apt-get full-upgrade -y && apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
