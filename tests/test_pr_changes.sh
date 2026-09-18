@@ -13,6 +13,7 @@ import yaml
 workflow_dir = Path('.github/workflows')
 workflows = {path.name: yaml.safe_load(path.read_text()) for path in workflow_dir.glob('*.yml')}
 assert set(workflows) == {
+    'auto-assign.yml',
     'dependabot-automerge.yml',
     'dependency-review.yml',
     'docker-publish.yml',
@@ -48,6 +49,19 @@ assert labeler['permissions'] == {
     'pull-requests': 'write',
 }
 assert set(labeler['jobs']) == {'triage'}
+
+auto_assign = workflows['auto-assign.yml']
+assert auto_assign['name'] == 'Auto assign issues and pull requests'
+assert auto_assign[True]['issues']['types'] == ['opened', 'reopened']
+assert auto_assign[True]['pull_request_target']['types'] == ['opened', 'reopened']
+assert auto_assign['permissions'] == {}
+assert set(auto_assign['jobs']) == {'assign'}
+assign = auto_assign['jobs']['assign']
+assert assign['permissions'] == {'issues': 'write'}
+assert assign['uses'] == (
+    'Avkroken/.github/.github/workflows/reusable-auto-assign.yml'
+    '@960eec40fe1d6e5be88da27f7b6b75adff64f4fb'
+)
 
 assert workflows['python-app.yml']['name'] == 'Python application'
 assert set(workflows['python-app.yml']['jobs']) == {'build'}
@@ -100,6 +114,9 @@ assert [item['context'] for item in contexts] == [
 
 for workflow in workflows.values():
     for job in workflow['jobs'].values():
+        if 'uses' in job:
+            ref = job['uses'].rsplit('@', 1)[1]
+            assert len(ref) == 40 and all(char in '0123456789abcdef' for char in ref)
         for step in job.get('steps', []):
             if 'uses' in step:
                 ref = step['uses'].rsplit('@', 1)[1]
