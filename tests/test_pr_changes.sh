@@ -99,7 +99,7 @@ assert {(item['package-ecosystem'], item['directory']) for item in dependabot['u
 
 with Path('.github/labeler.yml').open() as stream:
     labeler_config = yaml.safe_load(stream)
-assert set(labeler_config) == {'python', 'tests', 'docker', 'dependencies', 'github_actions'}
+assert set(labeler_config) == {'documentation', 'enhancement'}
 
 with Path('.github/rulesets/main.json').open() as stream:
     ruleset = json.load(stream)
