@@ -5,7 +5,6 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
 python3 - <<'PY'
-import json
 from pathlib import Path
 
 import yaml
@@ -15,18 +14,34 @@ workflows = {path.name: yaml.safe_load(path.read_text()) for path in workflow_di
 assert set(workflows) == {
     'auto-assign.yml',
     'dependabot-automerge.yml',
-    'dependency-review.yml',
     'docker-publish.yml',
     'labeler.yml',
     'python-app.yml',
 }
 
-for filename in ('dependency-review.yml', 'docker-publish.yml', 'python-app.yml'):
-    workflow = workflows[filename]
-    permissions = workflow['permissions'] if 'permissions' in workflow else workflow['jobs']['build']['permissions']
-    assert permissions['contents'] == 'read', filename
-    assert 'pull_request' in workflow[True], filename
-    assert workflow[True]['pull_request']['branches'] == ['main'], filename
+# Pull-request gates are organization rulesets. Local CI remains only for
+# post-merge validation and publishing.
+python_app = workflows['python-app.yml']
+assert python_app['name'] == 'Python application'
+assert python_app['permissions'] == {'contents': 'read'}
+assert python_app[True] == {'push': {'branches': ['main']}}
+assert set(python_app['jobs']) == {'build'}
+
+docker_publish = workflows['docker-publish.yml']
+assert docker_publish['name'] == 'Docker'
+assert 'pull_request' not in docker_publish[True]
+assert set(docker_publish[True]) == {'schedule', 'push'}
+assert set(docker_publish['jobs']) == {'publish'}
+publish = docker_publish['jobs']['publish']
+assert publish['permissions'] == {'contents': 'read', 'packages': 'write'}
+assert docker_publish['env']['IMAGE_NAME'] == 'avkroken/plex-clear-watchlist'
+assert {step['uses'] for step in publish['steps'] if 'uses' in step} == {
+    'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
+    'docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e',
+    'docker/login-action@dbcb813823bdd20940b903addbd779551569679f',
+    'docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302',
+    'docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a',
+}
 
 automerge = workflows['dependabot-automerge.yml']
 assert automerge['name'] == 'Dependabot auto-merge'
@@ -63,29 +78,9 @@ assert assign['uses'] == (
     '@960eec40fe1d6e5be88da27f7b6b75adff64f4fb'
 )
 
-assert workflows['python-app.yml']['name'] == 'Python application'
-assert set(workflows['python-app.yml']['jobs']) == {'build'}
-assert workflows['dependency-review.yml']['name'] == 'Dependency review'
-assert set(workflows['dependency-review.yml']['jobs']) == {'dependency-review'}
-assert workflows['docker-publish.yml']['name'] == 'Docker'
-assert set(workflows['docker-publish.yml']['jobs']) == {'build', 'publish'}
-build = workflows['docker-publish.yml']['jobs']['build']
-publish = workflows['docker-publish.yml']['jobs']['publish']
-assert build['permissions'] == {'contents': 'read'}
-assert publish['permissions'] == {'contents': 'read', 'packages': 'write'}
-assert workflows['docker-publish.yml']['env']['IMAGE_NAME'] == 'avkroken/plex-clear-watchlist'
-assert {step['uses'] for step in build['steps'] if 'uses' in step} == {
-    'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
-    'docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e',
-    'docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a',
-}
-assert {step['uses'] for step in publish['steps'] if 'uses' in step} == {
-    'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
-    'docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e',
-    'docker/login-action@dbcb813823bdd20940b903addbd779551569679f',
-    'docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302',
-    'docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a',
-}
+# Ruleset policy is organization-level and must not be shadowed by a stale
+# repository-local JSON export.
+assert not Path('.github/rulesets/main.json').exists()
 
 with Path('.github/dependabot.yml').open() as stream:
     dependabot = yaml.safe_load(stream)
@@ -100,17 +95,6 @@ assert {(item['package-ecosystem'], item['directory']) for item in dependabot['u
 with Path('.github/labeler.yml').open() as stream:
     labeler_config = yaml.safe_load(stream)
 assert set(labeler_config) == {'documentation', 'enhancement'}
-
-with Path('.github/rulesets/main.json').open() as stream:
-    ruleset = json.load(stream)
-assert ruleset['target'] == 'branch'
-assert ruleset['conditions']['ref_name']['include'] == ['~DEFAULT_BRANCH']
-assert [rule['type'] for rule in ruleset['rules']] == ['required_status_checks']
-contexts = ruleset['rules'][0]['parameters']['required_status_checks']
-assert [item['context'] for item in contexts] == [
-    'build',
-    'dependency-review',
-]
 
 for workflow in workflows.values():
     for job in workflow['jobs'].values():
