@@ -72,11 +72,12 @@ assert auto_assign[True]['pull_request_target']['types'] == ['opened', 'reopened
 assert auto_assign['permissions'] == {}
 assert set(auto_assign['jobs']) == {'assign'}
 assign = auto_assign['jobs']['assign']
-assert assign['permissions'] == {'issues': 'write'}
+assert assign['permissions'] == {'issues': 'write', 'pull-requests': 'write'}
 assert assign['uses'] == (
     'Avkroken/.github/.github/workflows/reusable-auto-assign.yml'
-    '@960eec40fe1d6e5be88da27f7b6b75adff64f4fb'
+    '@fdae2c7859b95cedd8df84ce1583ac420b66b7b7'
 )
+assert assign['with']['number'] == "${{ format('{0}', github.event.issue.number || github.event.pull_request.number) }}"
 
 # Ruleset policy is organization-level and must not be shadowed by a stale
 # repository-local JSON export.
