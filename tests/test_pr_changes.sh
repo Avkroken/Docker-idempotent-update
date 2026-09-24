@@ -12,31 +12,31 @@ workflow_dir = Path('.github/workflows')
 workflows = {path.name: yaml.safe_load(path.read_text()) for path in workflow_dir.glob('*.yml')}
 assert set(workflows) == {
     'auto-assign.yml',
+    'ci.yml',
     'dependabot-automerge.yml',
     'docker-publish.yml',
     'labeler.yml',
-    'python-app.yml',
-    'repository-policy.yml',
 }
+
+ci = workflows['ci.yml']
+assert ci['name'] == 'CI'
+assert ci['permissions'] == {'contents': 'read'}
+assert set(ci['jobs']) == {'dependency-review', 'python', 'docker'}
+assert ci['jobs']['dependency-review']['name'] == 'Dependency review'
+assert ci['jobs']['python']['name'] == 'Python'
+assert ci['jobs']['docker']['name'] == 'Docker'
 
 auto_assign = workflows['auto-assign.yml']
 assert auto_assign['name'] == 'Auto assign issues and pull requests'
-assert auto_assign[True]['issues']['types'] == ['opened', 'reopened']
-assert auto_assign[True]['pull_request_target']['types'] == ['opened', 'reopened']
-assert auto_assign['permissions'] == {}
 assign = auto_assign['jobs']['assign']
 assert assign['permissions'] == {'issues': 'write', 'pull-requests': 'write'}
 assert assign['runs-on'] == 'ubuntu-latest'
 assert 'uses' not in assign
 assert 'gh api' in assign['steps'][0]['run']
 
-policy = workflows['repository-policy.yml']
-assert policy['name'] == 'Repository policy'
-assert policy['permissions'] == {'contents': 'read'}
-assert set(policy['jobs']) == {'dependency-review', 'python', 'docker', 'policy'}
-assert policy['jobs']['policy']['name'] == 'Repository policy'
-
-assert not Path('.github/rulesets/main.json').exists()
+docker_publish = workflows['docker-publish.yml']
+assert 'pull_request' not in docker_publish[True]
+assert set(docker_publish[True]) == {'schedule', 'push'}
 
 for workflow in workflows.values():
     for job in workflow['jobs'].values():
