@@ -1,66 +1,86 @@
 # Projektkontext
 
-**Senast verifierad:** 2026-09-23
+**Senast verifierad:** 2026-09-24
 
 ## Ansvar
 
-`Docker-idempotent-update` kör återkommande Docker-underhåll och backup. Den aktuella Python-entrypointen är `src.run`.
+Repositoryt innehåller ett Python-baserat verktyg för Docker-uppdatering och backup.
 
-Körningen:
+Huvudkomponenter:
 
-1. läser runtime-konfiguration via `Config`,
-2. utför containeruppdatering när `MODE` är `update` eller `both`,
-3. utför rclone-backup när `MODE` är `backup` eller `both`,
-4. skickar rapport när det finns relevanta förändringar/fel och e-post är konfigurerad,
-5. skriver reducerad status till `/config/status.json`.
+- `src/entrypoint.py` — process-/scheduleringång
+- `src/run.py` — orkestrerar vald körning
+- `src/docker_update.py` — Docker update/recreation
+- `src/backup.py` — backupflöde
+- `src/config.py` — runtimekonfiguration
+- `src/report.py` och `src/github_report.py` — status/rapportering
 
-## Runtime-konfiguration
+## Modes
 
-Verifierade miljövariabler:
+`MODE` accepterar:
 
-- `MODE`: `update`, `backup` eller `both` (default `both`),
-- `DRY_RUN`: `true` för icke-muterande körning,
-- `EMAIL_TO`: mottagare för rapporter,
-- `CRON_SCHEDULE`: schema; default `0 3 * * *`,
-- `COMPOSE_FILE`: aktiverar Compose-vägen,
-- `COMPOSE_ENV_FILE`: valfri env-fil för Compose.
+- `update`
+- `backup`
+- `both` (default)
 
-Backupkonfiguration kan kompletteras via `/config/backup.conf` med `RCLONE_SRC`, `RCLONE_DST` och `BACKUP_DIRS`.
+Ogiltiga värden avvisas i `Config`.
 
-## Uppdateringsmodeller
+## Updatevägar
 
-### Docker Compose
+### Compose
 
-När `COMPOSE_FILE` är satt:
-
-- tjänster läses via `docker compose config --services`,
-- images pullas sekventiellt med högst tre försök per service,
-- `docker compose up -d --remove-orphans` applicerar state,
-- före/efter-image-ID jämförs för att rapportera faktiskt uppdaterade services.
+När `COMPOSE_FILE` är satt används Docker Compose. Valfri `COMPOSE_ENV_FILE` används om filen finns.
 
 ### Direkt Docker
 
-Utan `COMPOSE_FILE`:
+Utan Compose-fil arbetar verktyget mot körande containers via Docker CLI/socket och recreatar containers vars running image-ID inte matchar den nyss pullade imagen.
 
-- images för körande containers pullas,
-- container image-ID jämförs med senaste lokala image-ID,
-- ändrade containers återskapas från `docker inspect`-state,
-- originalcontainern stoppas och byter till ett temporärt backupnamn,
-- ersättaren måste verifieras som `Running` innan backupcontainern tas bort,
-- misslyckad recreation försöker återställa originalcontainern.
+## Dry-run
+
+`DRY_RUN=true` ska beskriva avsedda uppdateringsoperationer utan att pull/up/recreate/prune muterar runtime.
+
+Dry-run är en säkerhets- och driftinvariant och ska omfattas av tester när updatealgoritmen ändras.
 
 ## Backup
 
-`src/backup.py` söker backupkataloger under den konfigurerade källan och kör `rclone sync` med retries. Misslyckade kataloger samlas till körresultatet.
+Backupkonfiguration läses från `/config/backup.conf` när filen finns.
 
-## Säkerhets- och driftsinvarianter
+Verifierade defaults i `Config`:
 
-- `DRY_RUN` får inte göra mutationer.
-- Container-recreation får inte ta bort rollback-kandidaten innan ersättaren är verifierad som körande.
-- Runtime-optioner som mounts, ports, restart policy, capabilities och resource limits får inte tappas av misstag.
-- Secrets hör hemma i runtime-konfiguration och ska inte dokumenteras med värden.
-- Docker-socket-access är en stark host-behörighet och ska inte utökas utanför det faktiska underhållsbehovet.
+- source: `/data`
+- destination: `gdrive:backups`
+- katalognamn: `backup` / `backups`
+
+Konfigurationen kan ändra source, destination och katalogurval.
+
+## Scheduler/status
+
+Default cron schedule är `0 3 * * *`. Statusfilen är `/config/status.json`.
+
+## Container-recreation
+
+Socket-läget bygger ett nytt `docker run` från `docker inspect` och bevarar bland annat relevanta:
+
+- restart policy,
+- network mode,
+- user/workdir,
+- environment,
+- binds/volumes/tmpfs,
+- port mappings,
+- labels,
+- capabilities/security options,
+- devices/DNS,
+- resource limits,
+- log driver,
+- stop signal,
+- entrypoint/cmd.
+
+Recreation använder ett backupnamn för originalcontainern och har best-effort rollback om den nya containern inte kan startas korrekt.
+
+## Dokumentationsgräns
+
+Repo-specifik implementation och runtime dokumenteras här. Organisationsgemensam CI/governance hör inte hemma som current-state i denna fil.
 
 ## Uppdateringskontrakt
 
-Uppdatera denna fil när körningsmodell, rollback, runtime-konfiguration, backupmodell eller rapportering ändras.
+Uppdatera dokumentationen vid förändringar i modes, updatealgoritm, inspect-preservation, rollback, backupmodell, scheduler eller statusrapportering.
