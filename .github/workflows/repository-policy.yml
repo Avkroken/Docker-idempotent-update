@@ -1,0 +1,76 @@
+name: Repository policy
+
+on:
+  pull_request:
+    branches: [main]
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    name: Dependency review
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Dependency review
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294
+        with:
+          base-ref: ${{ github.event_name == 'merge_group' && github.event.merge_group.base_sha || '' }}
+          head-ref: ${{ github.event_name == 'merge_group' && github.event.merge_group.head_sha || '' }}
+          retry-on-snapshot-warnings: true
+          retry-on-snapshot-warnings-timeout: 300
+
+  python:
+    name: Python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.13"
+      - name: Validate Python repository
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest PyYAML
+          pip install -r plex-clear-watchlist/requirements.txt
+          flake8 src plex-clear-watchlist --count --select=E9,F63,F7,F82 --show-source --statistics
+          bash tests/test_pr_changes.sh
+
+  docker:
+    name: Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Build image
+        run: docker build --pull -t avkroken/docker-idempotent-update-ci plex-clear-watchlist
+
+  policy:
+    name: Repository policy
+    if: ${{ always() }}
+    needs: [dependency-review, python, docker]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce required job results
+        env:
+          DEPENDENCY_REVIEW: ${{ needs.dependency-review.result }}
+          PYTHON: ${{ needs.python.result }}
+          DOCKER: ${{ needs.docker.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for result in "$DEPENDENCY_REVIEW" "$PYTHON" "$DOCKER"; do
+            if [[ "$result" != "success" ]]; then
+              echo "::error::A required repository-policy job did not succeed: $result"
+              exit 1
+            fi
+          done
