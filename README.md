@@ -1,15 +1,28 @@
 # Docker-idempotent-update
 
-Repositoryt underhålls av Avkroken.
+Docker-idempotent-update automatiserar säkra Docker-uppdateringar och backup i två körlägen: Docker Compose eller direkt mot redan körande containers. Verktyget försöker bevara befintlig runtimekonfiguration vid container-recreation och rapporterar vad som faktiskt ändrades.
 
-## Issues
+## Snabbstart för utveckling
 
-Använd GitHub Issues för reproducerbara fel eller förbättringsförslag. Mallarna i `.github/ISSUE_TEMPLATE/` används för nya ärenden.
+```bash
+python3 -m compileall -q src plex-clear-watchlist
+python3 -m pytest -q
+bash tests/test_pr_changes.sh
+```
 
-## Säkerhet
+## Dokumentation
 
-Rapportera inte sårbarheter eller hemligheter i publika issues. Följ [SECURITY.md](SECURITY.md) för privat rapportering.
+Börja i **[dokumentationsöversikten](docs/index.md)**.
 
-## Finansiering
+- [Projektkontext](docs/project-context.md) — modes, konfiguration och invariants
+- [Arkitektur](docs/architecture.md) — update-/backupflöden och rollbackmodell
+- [Drift](docs/operations.md) — verifiering, dry-run, scheduler och incidenter
+- [SECURITY.md](SECURITY.md) — säkerhetsrapportering
 
-GitHub Sponsors-konfigurationen finns i `.github/FUNDING.yml`.
+README är en ingång; detaljerad teknisk information ligger under `docs/`.
+
+## Viktiga invariants
+
+- `DRY_RUN=true` får inte mutera containers.
+- Compose-läget och socket-läget har olika updatealgoritmer.
+- socket-recreation måste bevara relevant inspect-derived runtimekonfiguration och återställa originalet om recreation misslyckas.
