@@ -9,6 +9,7 @@ Navigationssida för Docker-idempotent-update.
 | Vilka modes och configvärden finns? | [Projektkontext](project-context.md) |
 | Hur fungerar update, recreation, backup och rollback? | [Arkitektur](architecture.md) |
 | Hur testar, kör och felsöker jag? | [Drift](operations.md) |
+| Hur versioneras och släpps verktyget/containerimagen? | [Release- och versionsstandard](release-standard.md) |
 | Hur rapporteras säkerhetsproblem? | [SECURITY.md](../SECURITY.md) |
 
 ## Komponenter
@@ -46,6 +47,7 @@ Utan Compose-fil inspekteras körande containers direkt. Nya images pullas och c
 - backup/rclone → architecture + operations
 - scheduler/status/reporting → operations
 - CI/workflows → tests och relevant GitHub-dokumentation
+- PR-title/SemVer/release/container-tagging → release-standard + operations
 
 ## Wiki
 
