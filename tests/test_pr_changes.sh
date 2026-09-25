@@ -16,6 +16,7 @@ assert set(workflows) == {
     'dependabot-automerge.yml',
     'docker-publish.yml',
     'labeler.yml',
+    'wiki-sync.yml',
 }
 
 ci = workflows['ci.yml']
@@ -37,6 +38,12 @@ assert 'gh api' in assign['steps'][0]['run']
 docker_publish = workflows['docker-publish.yml']
 assert 'pull_request' not in docker_publish[True]
 assert set(docker_publish[True]) == {'schedule', 'push'}
+
+wiki_sync = workflows['wiki-sync.yml']
+assert wiki_sync['name'] == 'Sync repository Wiki'
+assert 'pull_request' not in wiki_sync[True]
+assert set(wiki_sync[True]) == {'workflow_dispatch', 'push'}
+assert wiki_sync['jobs']['sync']['permissions'] == {'contents': 'write'}
 
 for workflow in workflows.values():
     for job in workflow['jobs'].values():
