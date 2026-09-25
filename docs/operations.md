@@ -81,6 +81,32 @@ När schedulerlogik ändras ska man skilja på:
 
 Statusfilen ligger i `/config/status.json`. Rapportering får inte maskera det ursprungliga update-/backupfelet.
 
+## Release och containerpublicering
+
+Release- och versionskontraktet finns i [release-standard.md](release-standard.md).
+
+Repositoryt har ingen canonical package-/appversionsfil. Versionerade releases förankras därför i SemVer-taggar `vMAJOR.MINOR.PATCH`; inför inte `version.txt` eller annan duplicerad versionskälla bara för automation.
+
+`.github/workflows/docker-publish.yml` publicerar:
+
+- `latest` från `main`;
+- `nightly` från schedule;
+- taggbaserad image för `v*.*.*`.
+
+En main-deploy/image-publicering är inte automatiskt en GitHub Release.
+
+Före versionerad release ska minst:
+
+1. `python3 -m compileall -q src plex-clear-watchlist`;
+2. `python3 -m pytest -q`;
+3. `bash tests/test_pr_changes.sh`;
+4. repositoryts Docker-buildcheck;
+5. relevanta dry-run/rollbackinvariants för ändrad updatekod
+
+vara verifierade.
+
+Current `main` har ingen verifierad aktiv release-PR/taggautomation. Lägg inte till ny PAT eller bredare App-writebehörighet som genväg för releaseautomation.
+
 ## Incidenter
 
 ### Container startar inte efter recreation
