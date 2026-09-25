@@ -49,4 +49,4 @@ Utan Compose-fil inspekteras körande containers direkt. Nya images pullas och c
 
 ## Wiki
 
-GitHub Wiki är aktiverad och är lämplig som navigationsyta för dessa ämnen. Versionsstyrd Markdown här är underlaget som Wiki-sidor ska spegla.
+Om GitHub Wiki används kan den fungera som navigationsyta för dessa ämnen. Versionsstyrd Markdown här är det tekniska underlaget; repositoryt gör inget antagande om aktuell Wiki-setting.
