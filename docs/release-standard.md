@@ -2,7 +2,7 @@
 
 **Senast verifierad:** 2026-09-25
 
-Det här dokumentet gäller **Avkroken/Docker-idempotent-update**. Repositoryts egna workflows och dokumentation äger release- och containerpubliceringskontraktet.
+Det här dokumentet gäller **detta Docker-idempotent-update-repository**. Repositoryts egna workflows och dokumentation äger release- och containerpubliceringskontraktet.
 
 ## Nuvarande versionsmodell
 
