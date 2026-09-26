@@ -17,6 +17,9 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
+# Stable GitHub repository ID; survives owner/name changes.
+_REPOSITORY_ID = 1214847978
+
 
 def main() -> None:
     cfg = Config()
@@ -71,6 +74,6 @@ if __name__ == "__main__":
     except Exception as exc:
         log.exception("Unhandled error in daily run")
         report_error_to_github(
-            "Avkroken/Docker-idempotent-update", "Daglig körning kraschade", exc
+            _REPOSITORY_ID, "Daglig körning kraschade", exc
         )
         raise
