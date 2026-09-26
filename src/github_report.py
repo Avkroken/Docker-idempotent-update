@@ -71,8 +71,23 @@ def _request(
         return e.code, {}
 
 
+
+def _resolve_repo(repo: str | int, headers: dict) -> str | None:
+    """Resolve a stable numeric repository ID to the current owner/name."""
+    if isinstance(repo, int) or (isinstance(repo, str) and repo.isdigit()):
+        status, data = _request(
+            "GET", f"https://api.github.com/repositories/{repo}", headers
+        )
+        if status != 200:
+            return None
+        full_name = data.get("full_name")
+        if isinstance(full_name, str) and "/" in full_name:
+            return full_name
+        return None
+    return repo
+
 def report_error_to_github(
-    repo: str, title: str, exc: BaseException, context: dict | None = None
+    repo: str | int, title: str, exc: BaseException, context: dict | None = None
 ) -> str | None:
     """Skapar (eller hoppar över om en dubblett redan finns) en GitHub-issue
     för ett oväntat fel. Returnerar issue-URL:en, eller None om rapportering
@@ -88,6 +103,14 @@ def report_error_to_github(
         "Accept": "application/vnd.github+json",
         "User-Agent": "github_report.py",
     }
+
+    try:
+        resolved_repo = _resolve_repo(repo, headers)
+    except (urllib.error.URLError, OSError):
+        return None
+    if not resolved_repo:
+        return None
+    repo = resolved_repo
 
     try:
         query = urllib.parse.urlencode(
