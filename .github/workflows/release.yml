@@ -59,6 +59,10 @@ jobs:
 
   release:
     name: Semantic release
+    outputs:
+      release: ${{ steps.release.outputs.release }}
+      tag: ${{ steps.release.outputs.tag }}
+      target_sha: ${{ steps.release.outputs.target_sha }}
     if: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 50
@@ -190,3 +194,16 @@ jobs:
             args+=(--prerelease)
           fi
           gh release create "${args[@]}"
+
+
+  publish-container:
+    name: Publish versioned container
+    needs: release
+    if: ${{ needs.release.outputs.release == 'true' }}
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/docker-publish.yml
+    with:
+      release_tag: ${{ needs.release.outputs.tag }}
+      target_sha: ${{ needs.release.outputs.target_sha }}
