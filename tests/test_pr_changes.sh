@@ -60,7 +60,12 @@ assert set(release[True]) == {'pull_request', 'push', 'workflow_dispatch'}
 assert set(release['jobs']) == {'validate', 'release'}
 assert release['jobs']['validate']['name'] == 'Validate semantic release'
 assert release['jobs']['release']['name'] == 'Semantic release'
-assert release['jobs']['release']['permissions'] == {\n    'actions': 'read',\n    'checks': 'read',\n    'contents': 'write',\n    'statuses': 'read',\n}
+assert release['jobs']['release']['permissions'] == {
+    'actions': 'read',
+    'checks': 'read',
+    'contents': 'write',
+    'statuses': 'read',
+}
 
 wiki_sync = workflows['wiki-sync.yml']
 assert wiki_sync['name'] == 'Sync repository Wiki'
