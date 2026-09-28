@@ -39,7 +39,7 @@ assert 'gh api' in assign['steps'][0]['run']
 
 docker_publish = workflows['docker-publish.yml']
 assert 'pull_request' not in docker_publish[True]
-assert set(docker_publish[True]) == {'schedule', 'push'}
+assert set(docker_publish[True]) == {'schedule', 'push', 'workflow_call'}
 
 pr_title = workflows['pr-title.yml']
 assert pr_title['name'] == 'PR title'
@@ -57,7 +57,7 @@ release = workflows['release.yml']
 assert release['name'] == 'Release'
 assert release['permissions'] == {'contents': 'read'}
 assert set(release[True]) == {'pull_request', 'push', 'workflow_dispatch'}
-assert set(release['jobs']) == {'validate', 'release'}
+assert set(release['jobs']) == {'validate', 'release', 'publish-container'}
 assert release['jobs']['validate']['name'] == 'Validate semantic release'
 assert release['jobs']['release']['name'] == 'Semantic release'
 assert release['jobs']['release']['permissions'] == {
