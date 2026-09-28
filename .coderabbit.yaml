@@ -1,0 +1,74 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+inheritance: true
+
+reviews:
+  request_changes_workflow: false
+  path_instructions:
+    - path: "src/docker_update.py"
+      instructions: |
+        Review Docker mutations as a safety-critical path.
+        DRY_RUN=true must remain non-mutating.
+        Socket-mode recreation must preserve inspect-derived runtime configuration
+        and retain best-effort rollback if replacement startup fails.
+        Flag changes that broaden Docker socket, host, or credential privileges.
+    - path: "src/backup.py"
+      instructions: |
+        Review backup changes for dry-run safety, explicit source/destination behavior,
+        error propagation, and avoidance of destructive side effects.
+    - path: "plex-clear-watchlist/**"
+      instructions: |
+        Review Plex API changes for pagination, authentication handling, idempotency,
+        bounded external calls, and clear failure behavior.
+  finishing_touches:
+    docstrings:
+      enabled: true
+    unit_tests:
+      enabled: true
+    simplify:
+      enabled: true
+    autofix:
+      enabled: true
+    fix_ci:
+      enabled: true
+    resolve_merge_conflict:
+      enabled: true
+  pre_merge_checks:
+    override_requested_reviewers_only: true
+    docstrings:
+      mode: error
+      threshold: 100
+
+code_generation:
+  docstrings:
+    path_instructions:
+      - path: "src/**/*.py"
+        instructions: |
+          Use Google-style Python docstrings.
+          Document Args, Returns, and Raises when applicable.
+          For Docker-facing functions, state whether the function mutates runtime,
+          how DRY_RUN changes behavior, and relevant rollback or recovery semantics.
+          Document observable side effects and external command/API boundaries.
+      - path: "plex-clear-watchlist/**/*.py"
+        instructions: |
+          Use Google-style Python docstrings.
+          Document Plex API inputs, pagination, authentication assumptions,
+          return values, side effects, and failure behavior.
+      - path: "tests/**/*.py"
+        instructions: |
+          Keep docstrings concise.
+          Describe the behavioral contract being verified and the safety regression
+          the test protects against; do not restate assertions line by line.
+  unit_tests:
+    path_instructions:
+      - path: "src/**/*.py"
+        instructions: |
+          Follow the existing pytest style and mocking patterns.
+          Prioritize DRY_RUN non-mutation, compose versus socket-mode behavior,
+          inspect-derived runtime configuration preservation, failed-recreation
+          rollback, subprocess failures, and idempotent repeated execution.
+      - path: "plex-clear-watchlist/**/*.py"
+        instructions: |
+          Follow existing pytest conventions.
+          Cover pagination boundaries, external API failures, authentication errors,
+          idempotent deletion behavior, and empty-result handling.
