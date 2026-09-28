@@ -17,6 +17,7 @@ assert set(workflows) == {
     'docker-publish.yml',
     'labeler.yml',
     'pr-title.yml',
+    'release.yml',
     'wiki-sync.yml',
 }
 
@@ -51,6 +52,13 @@ assert title_job['runs-on'] == 'ubuntu-latest'
 assert 'uses' not in title_job
 assert all('uses' not in step for step in title_job['steps'])
 assert not any('secrets.' in str(step) for step in title_job['steps'])
+
+release = workflows['release.yml']
+assert release['name'] == 'Release'
+assert release['permissions'] == {'contents': 'write'}
+assert set(release[True]) == {'push', 'workflow_dispatch'}
+assert set(release['jobs']) == {'release'}
+assert release['jobs']['release']['name'] == 'Semantic release'
 
 wiki_sync = workflows['wiki-sync.yml']
 assert wiki_sync['name'] == 'Sync repository Wiki'
