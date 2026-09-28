@@ -8,6 +8,14 @@ on:
   push:
     branches: [main]
     tags: ['v*.*.*']
+  workflow_call:
+    inputs:
+      release_tag:
+        required: true
+        type: string
+      target_sha:
+        required: true
+        type: string
 
 env:
   REGISTRY: ghcr.io
@@ -15,7 +23,7 @@ env:
 
 jobs:
   publish:
-    if: github.event_name == 'push' || github.event_name == 'schedule'
+    if: github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_call'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -26,6 +34,19 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          ref: ${{ github.event_name == 'workflow_call' && inputs.target_sha || '' }}
+
+      - name: Validate release image tag
+        if: ${{ github.event_name == 'workflow_call' }}
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          [[ "${RELEASE_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]] || {
+            echo "::error::Invalid release image tag: ${RELEASE_TAG}"
+            exit 1
+          }
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - name: Log into registry ${{ env.REGISTRY }}
@@ -34,16 +55,17 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ github.token }}
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.event_name == 'schedule' }}
-            type=ref,event=branch
-            type=ref,event=tag
+            type=raw,value=latest,enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+            type=raw,value=${{ inputs.release_tag }},enable=${{ github.event_name == 'workflow_call' }}
+            type=ref,event=branch,enable=${{ github.event_name == 'push' }}
+            type=ref,event=tag,enable=${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
             type=schedule,pattern=nightly
       - name: Build and push Docker image
         id: build-and-push

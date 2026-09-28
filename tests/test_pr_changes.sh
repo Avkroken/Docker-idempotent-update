@@ -18,6 +18,7 @@ assert set(workflows) == {
     'docker-publish.yml',
     'labeler.yml',
     'pr-title.yml',
+    'release.yml',
     'wiki-sync.yml',
 }
 
@@ -50,12 +51,12 @@ assert 'gh api' in assign['steps'][0]['run']
 
 docker_publish = workflows['docker-publish.yml']
 assert 'pull_request' not in docker_publish[True]
-assert set(docker_publish[True]) == {'schedule', 'push'}
+assert set(docker_publish[True]) == {'schedule', 'push', 'workflow_call'}
 
 pr_title = workflows['pr-title.yml']
 assert pr_title['name'] == 'PR title'
 assert pr_title['permissions'] == {}
-assert set(pr_title[True]) == {'pull_request'}
+assert set(pr_title[True]) == {'merge_group', 'pull_request'}
 assert set(pr_title['jobs']) == {'conventional-title'}
 title_job = pr_title['jobs']['conventional-title']
 assert title_job['name'] == 'Conventional PR title'
@@ -63,6 +64,20 @@ assert title_job['runs-on'] == 'ubuntu-latest'
 assert 'uses' not in title_job
 assert all('uses' not in step for step in title_job['steps'])
 assert not any('secrets.' in str(step) for step in title_job['steps'])
+
+release = workflows['release.yml']
+assert release['name'] == 'Release'
+assert release['permissions'] == {'contents': 'read'}
+assert set(release[True]) == {'pull_request', 'push', 'workflow_dispatch'}
+assert set(release['jobs']) == {'validate', 'release', 'publish-container'}
+assert release['jobs']['validate']['name'] == 'Validate semantic release'
+assert release['jobs']['release']['name'] == 'Semantic release'
+assert release['jobs']['release']['permissions'] == {
+    'actions': 'read',
+    'checks': 'read',
+    'contents': 'write',
+    'statuses': 'read',
+}
 
 wiki_sync = workflows['wiki-sync.yml']
 assert wiki_sync['name'] == 'Sync repository Wiki'
@@ -73,8 +88,12 @@ assert wiki_sync['jobs']['sync']['permissions'] == {'contents': 'write'}
 for workflow in workflows.values():
     for job in workflow['jobs'].values():
         if 'uses' in job:
-            ref = job['uses'].rsplit('@', 1)[1]
-            assert len(ref) == 40 and all(char in '0123456789abcdef' for char in ref)
+            uses = job['uses']
+            if uses.startswith('./.github/workflows/'):
+                assert '@' not in uses
+            else:
+                ref = uses.rsplit('@', 1)[1]
+                assert len(ref) == 40 and all(char in '0123456789abcdef' for char in ref)
         for step in job.get('steps', []):
             if 'uses' in step:
                 ref = step['uses'].rsplit('@', 1)[1]
