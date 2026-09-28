@@ -14,3 +14,13 @@
 - Använd `DRY_RUN` för icke-muterande driftsverifiering när relevant.
 - Utöka inte Docker-socket-, host- eller credentialbehörigheter för bekvämlighet.
 - Lägg aldrig secrets eller credential-värden i repository eller dokumentation.
+## Agent skills
+
+### Issue tracker
+
+Use this repository's GitHub Issues for issues and specifications. Read `docs/agents/issue-tracker.md` before reading, creating, or publishing tickets.
+
+### Domain docs
+
+Use the single-context convention in `docs/agents/domain.md`; existing project-context, architecture, operations, and ADR documentation remain authoritative.
+
