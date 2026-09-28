@@ -13,6 +13,7 @@ workflows = {path.name: yaml.safe_load(path.read_text()) for path in workflow_di
 assert set(workflows) == {
     'auto-assign.yml',
     'ci.yml',
+    'codeql.yml',
     'dependabot-automerge.yml',
     'docker-publish.yml',
     'labeler.yml',
@@ -27,6 +28,17 @@ assert set(ci['jobs']) == {'dependency-review', 'python', 'docker'}
 assert ci['jobs']['dependency-review']['name'] == 'Dependency review'
 assert ci['jobs']['python']['name'] == 'Python'
 assert ci['jobs']['docker']['name'] == 'Docker'
+
+codeql = workflows['codeql.yml']
+assert codeql['name'] == 'CodeQL'
+assert codeql['permissions'] == {
+    'contents': 'read',
+    'security-events': 'write',
+    'actions': 'read',
+}
+analyze = codeql['jobs']['analyze']
+assert analyze['runs-on'] == 'ubuntu-latest'
+assert set(analyze['strategy']['matrix']['language']) == {'actions', 'python'}
 
 auto_assign = workflows['auto-assign.yml']
 assert auto_assign['name'] == 'Auto assign issues and pull requests'
