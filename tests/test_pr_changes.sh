@@ -44,7 +44,7 @@ assert set(docker_publish[True]) == {'schedule', 'push'}
 pr_title = workflows['pr-title.yml']
 assert pr_title['name'] == 'PR title'
 assert pr_title['permissions'] == {}
-assert set(pr_title[True]) == {'pull_request'}
+assert set(pr_title[True]) == {'merge_group', 'pull_request'}
 assert set(pr_title['jobs']) == {'conventional-title'}
 title_job = pr_title['jobs']['conventional-title']
 assert title_job['name'] == 'Conventional PR title'
@@ -60,7 +60,7 @@ assert set(release[True]) == {'pull_request', 'push', 'workflow_dispatch'}
 assert set(release['jobs']) == {'validate', 'release'}
 assert release['jobs']['validate']['name'] == 'Validate semantic release'
 assert release['jobs']['release']['name'] == 'Semantic release'
-assert release['jobs']['release']['permissions'] == {'contents': 'write'}
+assert release['jobs']['release']['permissions'] == {\n    'actions': 'read',\n    'checks': 'read',\n    'contents': 'write',\n    'statuses': 'read',\n}
 
 wiki_sync = workflows['wiki-sync.yml']
 assert wiki_sync['name'] == 'Sync repository Wiki'
