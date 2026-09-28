@@ -55,10 +55,12 @@ assert not any('secrets.' in str(step) for step in title_job['steps'])
 
 release = workflows['release.yml']
 assert release['name'] == 'Release'
-assert release['permissions'] == {'contents': 'write'}
-assert set(release[True]) == {'push', 'workflow_dispatch'}
-assert set(release['jobs']) == {'release'}
+assert release['permissions'] == {'contents': 'read'}
+assert set(release[True]) == {'pull_request', 'push', 'workflow_dispatch'}
+assert set(release['jobs']) == {'validate', 'release'}
+assert release['jobs']['validate']['name'] == 'Validate semantic release'
 assert release['jobs']['release']['name'] == 'Semantic release'
+assert release['jobs']['release']['permissions'] == {'contents': 'write'}
 
 wiki_sync = workflows['wiki-sync.yml']
 assert wiki_sync['name'] == 'Sync repository Wiki'
