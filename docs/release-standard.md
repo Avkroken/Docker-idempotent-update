@@ -54,6 +54,19 @@ PR
 
 Releasejobbet kör bara på `main`, använder full Git-historik, kräver checks i `.github/release-required-checks` och vägrar divergerande/stale versionshistorik.
 
+## Required release checks
+
+En release-target måste ha `success` från följande repo-lokala verifieringar:
+
+- `Python`;
+- `Docker`;
+- `CodeQL (actions)`;
+- `CodeQL (python)`.
+
+Releasegaten bedömer endast dessa uttryckligen required checks. PR-only eller underhållsspecifika jobb, exempelvis `Dependency review`, Dependabot-automerge eller andra sidoworkflows, får inte oavsiktligt blockera en versionerad release på en redan verifierad `main`-SHA.
+
+Gaten väntar på exakt release-target SHA, kräver att samtliga namn faktiskt observeras och accepterar endast `success` för dem. Release-låset failar stängt om den egna aktiva releasekörningen inte kan verifieras, och en befintlig SemVer-tagg får bara användas som releaseankare om motsvarande GitHub Release finns och inte är draft.
+
 ## Containerpublicering
 
 `.github/workflows/docker-publish.yml` har tre separata roller:
