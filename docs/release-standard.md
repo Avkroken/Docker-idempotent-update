@@ -1,180 +1,85 @@
 # Release- och versionsstandard
 
-**Senast verifierad:** 2026-09-25
+**Senast verifierad:** 2026-09-28
 
-Det här dokumentet gäller **detta Docker-idempotent-update-repository**. Repositoryts egna workflows och dokumentation äger release- och containerpubliceringskontraktet.
+Det här dokumentet gäller **Docker-idempotent-update**. Repositoryts egna workflows, taggar och GitHub Releases äger release- och containerpubliceringskontraktet.
 
-## Nuvarande versionsmodell
+## Versionsankare
 
-Repositoryt har ingen verifierad canonical package-/appversionsfil på current `main`.
-
-Inför inte `version.txt` eller annan lokal versionfil enbart för releaseautomation.
-
-För versionerade releases används SemVer-taggen som versionsankare:
+Repositoryreleases använder immutable SemVer-taggar:
 
 ```text
 vMAJOR.MINOR.PATCH
 ```
 
-Exempel:
+GitHub Release och den versionsmärkta GHCR-imagen använder samma tagg. `latest` och `nightly` är rörliga distributionskanaler och är inte releaseversioner.
 
-```text
-v1.4.2
-```
+## PR-titlar och merge queue
 
-GitHub Release ska referera samma tagg.
-
-## Befintlig containerpublicering
-
-`.github/workflows/docker-publish.yml` är current source of truth för GHCR-publicering.
-
-Verifierat beteende:
-
-- push till `main` publicerar image-taggen `latest`;
-- schemalagd körning publicerar `nightly`;
-- push av tagg som matchar `v*.*.*` publicerar taggbaserad image;
-- registry är `ghcr.io`;
-- image är `avkroken/plex-clear-watchlist`.
-
-Det innebär att **deployment/image publication och GitHub Release inte är samma operation**. Main kan publicera `latest` utan att skapa en versionerad release.
-
-En versionerad release ska använda samma SemVer-tag som containerpubliceringen så att GitHub Release och GHCR-taggen går att korrelera.
-
-## PR-titlar och squash commits
-
-Pull request-titlar ska följa Conventional Commits:
+PR-titlar ska följa Conventional Commits:
 
 ```text
 <type>[optional scope][!]: <description>
 ```
 
-Tillåtna typer:
+Tillåtna typer är `feat`, `fix`, `perf`, `refactor`, `docs`, `test`, `build`, `ci`, `chore` och `revert`.
 
-- `feat`
-- `fix`
-- `perf`
-- `refactor`
-- `docs`
-- `test`
-- `build`
-- `ci`
-- `chore`
-- `revert`
-
-Scope är valfri, exempelvis `docker`, `backup`, `scheduler`, `reporting` eller `deps`.
-
-`!` markerar breaking change:
-
-```text
-feat(docker)!: replace recreation contract
-```
-
-Workflow `.github/workflows/pr-title.yml` validerar titeln på `pull_request`. Det använder inga secrets, checkar inte ut repositoryt och har `permissions: {}`.
-
-Aktuell Dependabot-historik använder redan kompatibla titlar som `build(deps): ...`.
+`.github/workflows/pr-title.yml` validerar pull requests och rapporterar samma required-check-context på `merge_group`. Workflown använder inga secrets och har `permissions: {}`.
 
 ## SemVer
 
-Vid versionerad release:
+Automatisk versionsberäkning följer:
 
-- breaking change → **major**;
-- `feat` → normalt **minor**;
-- `fix` → normalt **patch**;
-- `docs`, `test`, `chore`, `ci` och `build` → normalt ingen release ensamma;
-- `perf` och `refactor` bedöms efter faktisk användar-/drifteffekt.
+- breaking change -> **major**;
+- `feat` -> **minor**;
+- `fix`, `perf` och `revert` -> **patch**;
+- `refactor`, `docs`, `test`, `build`, `ci` och `chore` skapar normalt ingen release ensamma;
+- `Release-As: major|minor|patch|none` kan klassificera en icke-breaking ändring;
+- breaking change kan aldrig sänkas under major av `Release-As`.
 
-Releaseversionen är inte samma sak som image-publiceringsfrekvensen. `latest` och `nightly` är rörliga distributionskanaler, inte SemVer-versioner.
+## Automatiskt releaseflöde
 
-## När release ska ske
-
-En versionerad release är motiverad när exempelvis:
-
-- update-/recreationbeteende får en användarrelevant funktion;
-- en fix bör få ett stabilt versionsankare;
-- backup-/scheduler-/configkontrakt ändras på ett sätt konsumenter behöver kunna referera;
-- en breaking ändring kräver ny major-version.
-
-Release sker kuraterat och inte automatiskt på varje main-push.
-
-## Releaseflöde
-
-Målflödet är:
+`.github/workflows/release.yml` äger releaseprocessen lokalt:
 
 ```text
-main changes
-  -> Conventional Commit-historik
-  -> release-PR
-  -> release notes + vald SemVer
-  -> ordinarie CI
-  -> merge
-  -> vMAJOR.MINOR.PATCH tag
-  -> befintlig docker-publish publicerar taggad image
-  -> GitHub Release på samma tagg
+PR
+  -> Conventional Commit-kompatibel PR-titel
+  -> ordinarie CI/review
+  -> merge till main
+  -> Python + Docker verifierar samma main-SHA
+  -> SemVer + genererade release notes
+  -> immutable GitHub Release/tagg
+  -> samma target-SHA byggs som versionsmärkt GHCR-image
 ```
 
-`latest` kan fortsatt publiceras av normal main-push oberoende av releaseflödet.
+Releasejobbet kör bara på `main`, använder full Git-historik, kräver checks i `.github/release-required-checks` och vägrar divergerande/stale versionshistorik.
 
-## Verifiering vid release
+## Containerpublicering
 
-Minst repositoryts verifierade gate ska vara grön:
+`.github/workflows/docker-publish.yml` har tre separata roller:
 
-```bash
-python3 -m compileall -q src plex-clear-watchlist
-python3 -m pytest -q
-bash tests/test_pr_changes.sh
-```
+- push till `main` publicerar `latest`;
+- schemakörning publicerar `nightly`;
+- releaseworkflown anropar samma workflow som reusable workflow och publicerar exakt release-taggen, exempelvis `v3.4.0`.
 
-Docker-builden i repository-CI ska också vara grön.
+Den versionerade image-publiceringen är explicit kopplad till releasejobbet. Den förlitar sig inte på att en tagg skapad med `GITHUB_TOKEN` ska starta en ny fristående workflowkörning.
 
-För ändringar i update/recreation ska relevanta dry-run- och rollbackinvariants verifieras enligt [operations.md](operations.md).
+## Changelog
 
-## Releaseautomation — current state
-
-Targeted current-main-verifiering hittade ingen Release Please- eller `action-gh-release`-workflow.
-
-Release Please kan tekniskt skapa release-PR/tagg/GitHub Release från Conventional Commits, men är inte aktiverat här. Med standard-`GITHUB_TOKEN` triggar bot-skapade PR:er/taggar inte efterföljande Actions-workflows, vilket skulle bryta kravet på normal CI på release-PR.
-
-Upstreamreferens: `https://github.com/googleapis/release-please-action#other-actions-on-release-please-prs`.
-
-Följande används inte som genväg:
-
-- ny PAT utan separat credentialbeslut;
-- bredare write-permissions för befintlig read-only integration;
-- lättade CI-/review-/repositoryskydd;
-- release-PR som mergas utan normal verifiering.
-
-Full releaseautomation förblir blockerad tills en least-privilege CI-kompatibel write-identitet eller annan säker modell är vald.
-
-## CHANGELOG och release notes
-
-Det finns ingen verifierad root `CHANGELOG.md` i den aktuella releaseinventeringen.
-
-GitHub Releases är den officiella versionerade releasehistoriken för Portalens Changelog. En framtida versionsstyrd changelog får införas av samma release-PR-process, men ska genereras från commit-/releasehistorik i stället för att bli en separat manuellt underhållen sanning.
+GitHub Releases är canonical changelog. Release notes genereras från repositoryts first-parent-historik och grupperas efter Conventional Commit-typ.
 
 ## Prerelease
 
-Prerelease används endast med konkret behov, exempelvis:
+Manuell `workflow_dispatch` kan skapa `vMAJOR.MINOR.PATCH-rc.N`. En RC publicerar motsvarande versionsmärkt GHCR-image. Promotion till stable pekar på den aktiva RC:ns commit och tar inte med senare `main`-commits implicit.
 
-```text
-v2.0.0-rc.1
-```
+## Credentials och permissions
 
-Kontrollera att container-taggingens faktiska workflowmatchning stödjer den avsedda taggen innan en prerelease används. Nuvarande trigger är `v*.*.*`; ändra inte publiceringskontraktet utan separat verifiering.
+Ingen PAT behövs. Releaseflödet använder endast repositoryts `GITHUB_TOKEN` med least privilege:
+
+- read för checks/status/history;
+- `contents: write` för GitHub Release/tagg;
+- `packages: write` endast i containerpubliceringsjobbet.
 
 ## Hotfix och rollback
 
-Hotfix utgår normalt från aktuell `main` och använder `fix:` när ändringen är bakåtkompatibel.
-
-Publicerade tags flyttas inte. Vid felaktig release:
-
-1. korrigera eller revert:a via vanlig PR;
-2. kör full relevant verifiering;
-3. skapa en ny SemVer-version/tagg;
-4. skapa ny GitHub Release;
-5. verifiera den taggade GHCR-imagen.
-
-Ingen force-push eller tag history rewrite används.
-
-## Kvarvarande blocker
-
-Full releaseautomation är separat arbete. Den får inte lösas genom nya onödiga credentials, write-permission på Skvallerbyttan eller kringgående av repositoryts CI.
+Publicerade taggar flyttas inte. En korrigering går via vanlig PR, normal verifiering och en ny SemVer-release. Ingen force-push eller tag history rewrite används.
