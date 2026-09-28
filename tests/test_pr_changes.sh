@@ -76,8 +76,12 @@ assert wiki_sync['jobs']['sync']['permissions'] == {'contents': 'write'}
 for workflow in workflows.values():
     for job in workflow['jobs'].values():
         if 'uses' in job:
-            ref = job['uses'].rsplit('@', 1)[1]
-            assert len(ref) == 40 and all(char in '0123456789abcdef' for char in ref)
+            uses = job['uses']
+            if uses.startswith('./.github/workflows/'):
+                assert '@' not in uses
+            else:
+                ref = uses.rsplit('@', 1)[1]
+                assert len(ref) == 40 and all(char in '0123456789abcdef' for char in ref)
         for step in job.get('steps', []):
             if 'uses' in step:
                 ref = step['uses'].rsplit('@', 1)[1]
