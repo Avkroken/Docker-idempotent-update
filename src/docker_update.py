@@ -1,4 +1,6 @@
 import json
+import csv
+import io
 import logging
 import subprocess
 import time
@@ -200,9 +202,26 @@ def _append_runtime_options(cmd: list[str], info: dict) -> list[str]:
         mount_type = mount.get("Type")
         target = mount.get("Destination")
         source = mount.get("Name") or mount.get("Source")
-        if not target or target in bind_targets or mount_type not in ("volume", "tmpfs"):
+        if not target or target in bind_targets or mount_type not in ("bind", "volume", "tmpfs"):
             continue
-        if mount_type == "volume" and source:
+        if mount_type == "bind" and source:
+            fields = ["type=bind", f"source={source}", f"target={target}"]
+            if not mount.get("RW", True):
+                fields.append("readonly")
+            if mount.get("Propagation"):
+                fields.append(f"bind-propagation={mount['Propagation']}")
+            configured = next((m for m in hc.get("Mounts") or [] if m.get("Target") == target), {})
+            options = configured.get("BindOptions") or {}
+            if options.get("NonRecursive"):
+                fields.append("bind-recursive=disabled")
+            elif options.get("ReadOnlyForceRecursive"):
+                fields.append("bind-recursive=readonly")
+            elif options.get("ReadOnlyNonRecursive"):
+                fields.append("bind-recursive=writable")
+            encoded = io.StringIO()
+            csv.writer(encoded, lineterminator="\n").writerow(fields)
+            cmd += ["--mount", encoded.getvalue().removesuffix("\n")]
+        elif mount_type == "volume" and source:
             spec = f"{source}:{target}"
             if not mount.get("RW", True):
                 spec += ":ro"
