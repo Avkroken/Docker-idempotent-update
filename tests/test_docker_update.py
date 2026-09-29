@@ -122,3 +122,23 @@ def test_recreate_removes_backup_only_after_replacement_is_running(monkeypatch):
 
     assert docker_update._recreate_container(cid, "example:latest", name) is True
     assert calls.index(["docker", "inspect", "--format={{.State.Running}}", name]) < calls.index(["docker", "rm", backup])
+
+
+def test_mount_style_bind_is_preserved_with_options():
+    import csv
+    info = {
+        "HostConfig": {"Binds": None, "Mounts": [{"Type": "bind", "Target": "/data", "BindOptions": {"NonRecursive": True}}]},
+        "Mounts": [{"Type": "bind", "Source": "/srv/data,archive", "Destination": "/data", "RW": False, "Propagation": "rslave"}],
+    }
+    cmd = docker_update._append_runtime_options(["docker", "run"], info)
+    options = next(csv.reader([cmd[cmd.index("--mount") + 1]]))
+    assert options == ["type=bind", "source=/srv/data,archive", "target=/data", "readonly", "bind-propagation=rslave", "bind-recursive=disabled"]
+
+
+def test_bind_from_volume_flag_is_not_duplicated():
+    info = {"HostConfig": {"Binds": ["/srv/data:/data:ro"]}, "Mounts": [
+        {"Type": "bind", "Source": "/srv/data", "Destination": "/data", "RW": False},
+    ]}
+    cmd = docker_update._append_runtime_options(["docker", "run"], info)
+    assert cmd.count("-v") == 1
+    assert "--mount" not in cmd
