@@ -105,7 +105,7 @@ Före versionerad release ska minst:
 
 vara verifierade.
 
-Current `main` har ingen verifierad aktiv release-PR/taggautomation. Lägg inte till ny PAT eller bredare App-writebehörighet som genväg för releaseautomation.
+Repositoryts aktiva releaseautomation ligger i `.github/workflows/release.yml` och använder repositoryts `GITHUB_TOKEN`; ingen separat PAT eller bredare App-writebehörighet behövs. Releasejobbet serialiseras med GitHub Actions native `concurrency` i stället för ett eget API-pollande release-lås.
 
 ## Incidenter
 

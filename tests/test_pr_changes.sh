@@ -71,13 +71,20 @@ assert release['permissions'] == {'contents': 'read'}
 assert set(release[True]) == {'pull_request', 'push', 'workflow_dispatch'}
 assert set(release['jobs']) == {'validate', 'release', 'publish-container'}
 assert release['jobs']['validate']['name'] == 'Validate semantic release'
-assert release['jobs']['release']['name'] == 'Semantic release'
-assert release['jobs']['release']['permissions'] == {
+release_job = release['jobs']['release']
+assert release_job['name'] == 'Semantic release'
+assert release_job['permissions'] == {
     'actions': 'read',
     'checks': 'read',
     'contents': 'write',
     'statuses': 'read',
 }
+assert release_job['concurrency'] == {
+    'group': "${{ format('semantic-release-{0}', github.repository) }}",
+    'cancel-in-progress': False,
+}
+assert release_job['steps'][0]['name'] == 'Checkout repository'
+assert all(step.get('name') != 'Wait for release turn' for step in release_job['steps'])
 
 wiki_sync = workflows['wiki-sync.yml']
 assert wiki_sync['name'] == 'Sync repository Wiki'

@@ -64,6 +64,9 @@ jobs:
       tag: ${{ steps.release.outputs.tag }}
       target_sha: ${{ steps.release.outputs.target_sha }}
     if: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+    concurrency:
+      group: ${{ format('semantic-release-{0}', github.repository) }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 50
     permissions:
@@ -72,87 +75,6 @@ jobs:
       contents: write
       statuses: read
     steps:
-      - name: Wait for release turn
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import json
-          import os
-          import time
-          import urllib.request
-
-          repository = os.environ["GITHUB_REPOSITORY"]
-          own_id = int(os.environ["GITHUB_RUN_ID"])
-          token = os.environ["GITHUB_TOKEN"]
-          started = time.monotonic()
-
-          def api(path):
-              request = urllib.request.Request(
-                  f"https://api.github.com/repos/{repository}{path}",
-                  headers={
-                      "Accept": "application/vnd.github+json",
-                      "Authorization": f"Bearer {token}",
-                      "X-GitHub-Api-Version": "2022-11-28",
-                      "User-Agent": "repository-release-lock",
-                  },
-              )
-              with urllib.request.urlopen(request, timeout=30) as response:
-                  return json.load(response)
-
-          def runs_with_status(status):
-              runs = []
-              page = 1
-              while True:
-                  data = api(
-                      f"/actions/workflows/release.yml/runs"
-                      f"?status={status}&per_page=100&page={page}"
-                  )
-                  batch = data.get("workflow_runs", [])
-                  runs.extend(batch)
-                  if len(batch) < 100:
-                      return runs
-                  page += 1
-
-          def active_runs():
-              runs = []
-              seen = set()
-              for status in ("queued", "in_progress", "waiting", "pending", "requested"):
-                  for run in runs_with_status(status):
-                      run_id = int(run["id"])
-                      if run_id in seen:
-                          continue
-                      seen.add(run_id)
-                      runs.append(run)
-              return runs
-
-          while True:
-              if time.monotonic() - started > 1800:
-                  raise SystemExit("Timed out waiting for an earlier release run.")
-
-              active = sorted(
-                  int(run["id"])
-                  for run in active_runs()
-                  if run.get("event") in {"push", "workflow_dispatch"}
-                  and run.get("status") != "completed"
-                  and run.get("head_branch") == "main"
-              )
-
-              if own_id not in active:
-                  raise SystemExit(
-                      "Current release run is absent from the active-run lock set; refusing to fail open."
-                  )
-
-              if own_id == active[0]:
-                  print("Release turn acquired.")
-                  break
-
-              print(f"Waiting for earlier release run {active[0]}.")
-              time.sleep(10)
-          PY
-
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
