@@ -1,6 +1,6 @@
 # Release- och versionsstandard
 
-**Senast verifierad:** 2026-09-28
+**Senast verifierad:** 2026-09-30
 
 Det här dokumentet gäller **Docker-idempotent-update**. Repositoryts egna workflows, taggar och GitHub Releases äger release- och containerpubliceringskontraktet.
 
@@ -65,7 +65,7 @@ En release-target måste ha `success` från följande repo-lokala verifieringar:
 
 Releasegaten bedömer endast dessa uttryckligen required checks. PR-only eller underhållsspecifika jobb, exempelvis `Dependency review`, Dependabot-automerge eller andra sidoworkflows, får inte oavsiktligt blockera en versionerad release på en redan verifierad `main`-SHA.
 
-Gaten väntar på exakt release-target SHA, kräver att samtliga namn faktiskt observeras och accepterar endast `success` för dem. Release-låset failar stängt om den egna aktiva releasekörningen inte kan verifieras, och en befintlig SemVer-tagg får bara användas som releaseankare om motsvarande GitHub Release finns och inte är draft.
+Gaten väntar på exakt release-target SHA, kräver att samtliga namn faktiskt observeras och accepterar endast `success` för dem. Releasejobbet serialiseras av GitHub Actions native `concurrency` med `cancel-in-progress: false`; det använder inte ett eget API-pollande lås vars synlighet kan drabbas av eventual consistency. En befintlig SemVer-tagg får bara användas som releaseankare om motsvarande GitHub Release finns och inte är draft.
 
 ## Containerpublicering
 
