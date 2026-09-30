@@ -48,14 +48,20 @@ assert set(agent_automerge[True]) == {
     'pull_request',
     'pull_request_review',
     'pull_request_review_comment',
+    'check_run',
     'push',
     'schedule',
     'workflow_dispatch',
 }
+assert agent_automerge[True]['check_run']['types'] == ['completed']
 assert agent_automerge['permissions'] == {}
 agent_job = agent_automerge['jobs']['agent-auto-merge']
-assert agent_job['permissions'] == {'contents': 'write', 'pull-requests': 'write'}
-assert agent_job['uses'] == 'Avkroken/.github/.github/workflows/agent-automerge-policy.yml@afc4f0297d162a10afecd350df2c67c01315426b'
+assert agent_job['permissions'] == {
+    'checks': 'read',
+    'contents': 'write',
+    'pull-requests': 'write',
+}
+assert agent_job['uses'] == 'Avkroken/.github/.github/workflows/agent-automerge-policy.yml@e853bde6e0e8c88e8d8df2709cf3e2d61ddc396c'
 
 auto_assign = workflows['auto-assign.yml']
 assert auto_assign['name'] == 'Auto assign issues and pull requests'
