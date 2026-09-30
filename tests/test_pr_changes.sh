@@ -55,7 +55,7 @@ assert set(agent_automerge[True]) == {
 assert agent_automerge['permissions'] == {}
 agent_job = agent_automerge['jobs']['agent-auto-merge']
 assert agent_job['permissions'] == {'contents': 'write', 'pull-requests': 'write'}
-assert agent_job['uses'] == 'Avkroken/.github/.github/workflows/agent-automerge-policy.yml@main'
+assert agent_job['uses'] == 'Avkroken/.github/.github/workflows/agent-automerge-policy.yml@afc4f0297d162a10afecd350df2c67c01315426b'
 
 auto_assign = workflows['auto-assign.yml']
 assert auto_assign['name'] == 'Auto assign issues and pull requests'
@@ -114,8 +114,6 @@ for workflow in workflows.values():
             uses = job['uses']
             if uses.startswith('./.github/workflows/'):
                 assert '@' not in uses
-            elif uses == 'Avkroken/.github/.github/workflows/agent-automerge-policy.yml@main':
-                pass
             else:
                 ref = uses.rsplit('@', 1)[1]
                 assert len(ref) == 40 and all(char in '0123456789abcdef' for char in ref)
