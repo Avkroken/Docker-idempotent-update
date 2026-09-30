@@ -11,6 +11,7 @@ import yaml
 workflow_dir = Path('.github/workflows')
 workflows = {path.name: yaml.safe_load(path.read_text()) for path in workflow_dir.glob('*.yml')}
 assert set(workflows) == {
+    'agent-automerge.yml',
     'auto-assign.yml',
     'ci.yml',
     'codeql.yml',
@@ -40,6 +41,21 @@ assert codeql['permissions'] == {
 analyze = codeql['jobs']['analyze']
 assert analyze['runs-on'] == 'ubuntu-latest'
 assert set(analyze['strategy']['matrix']['language']) == {'actions', 'python'}
+
+agent_automerge = workflows['agent-automerge.yml']
+assert agent_automerge['name'] == 'Agent auto-merge'
+assert set(agent_automerge[True]) == {
+    'pull_request',
+    'pull_request_review',
+    'pull_request_review_comment',
+    'push',
+    'schedule',
+    'workflow_dispatch',
+}
+assert agent_automerge['permissions'] == {}
+agent_job = agent_automerge['jobs']['agent-auto-merge']
+assert agent_job['permissions'] == {'contents': 'write', 'pull-requests': 'write'}
+assert agent_job['uses'] == 'Avkroken/.github/.github/workflows/agent-automerge-policy.yml@main'
 
 auto_assign = workflows['auto-assign.yml']
 assert auto_assign['name'] == 'Auto assign issues and pull requests'
@@ -98,6 +114,8 @@ for workflow in workflows.values():
             uses = job['uses']
             if uses.startswith('./.github/workflows/'):
                 assert '@' not in uses
+            elif uses == 'Avkroken/.github/.github/workflows/agent-automerge-policy.yml@main':
+                pass
             else:
                 ref = uses.rsplit('@', 1)[1]
                 assert len(ref) == 40 and all(char in '0123456789abcdef' for char in ref)
