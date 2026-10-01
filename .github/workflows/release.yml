@@ -63,11 +63,8 @@ jobs:
     name: Semantic release
     outputs:
       release: ${{ steps.release.outputs.release }}
-      base_tag: ${{ steps.release.outputs.base_tag }}
-      target_sha: ${{ steps.release.outputs.target_sha }}
-    outputs:
-      release: ${{ steps.release.outputs.release }}
       tag: ${{ steps.release.outputs.tag }}
+      base_tag: ${{ steps.release.outputs.base_tag }}
       target_sha: ${{ steps.release.outputs.target_sha }}
     if: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
     concurrency:
