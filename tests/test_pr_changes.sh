@@ -101,7 +101,6 @@ assert release_job['permissions'] == {
     'actions': 'read',
     'checks': 'read',
     'contents': 'write',
-    'pull-requests': 'read',
     'statuses': 'read',
 }
 assert release_job['concurrency'] == {
@@ -114,6 +113,9 @@ release_steps = {step.get('name'): step for step in release_job['steps']}
 assert 'Generate Copilot release notes' not in release_steps
 copilot_job = release['jobs']['copilot-release-notes']
 assert copilot_job['permissions'] == {'contents': 'read', 'pull-requests': 'read'}
+assert copilot_job['needs'] == 'release'
+assert copilot_job['continue-on-error'] is True
+assert copilot_job['if'] == "${{ needs.release.result == 'success' && needs.release.outputs.release == 'true' }}"
 copilot_steps = {step.get('name'): step for step in copilot_job['steps']}
 assert copilot_steps['Install pinned Copilot CLI']['run'].find('@github/copilot@1.0.90') >= 0
 copilot = copilot_steps['Generate Copilot release notes']
