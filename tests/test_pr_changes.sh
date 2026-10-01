@@ -123,14 +123,21 @@ assert copilot_job['needs'] == 'release'
 assert copilot_job['continue-on-error'] is True
 assert copilot_job['if'] == "${{ needs.release.result == 'success' && needs.release.outputs.release == 'true' }}"
 copilot_steps = {step.get('name'): step for step in copilot_job['steps']}
-assert copilot_steps['Install pinned Copilot CLI']['run'].find('@github/copilot@1.0.90') >= 0
+resolve_copilot = copilot_steps['Resolve Copilot inputs']
+assert resolve_copilot['env']['COPILOT_AVAILABLE'] == "${{ secrets.COPILOT_GITHUB_TOKEN != '' }}"
+assert 'COPILOT_GITHUB_TOKEN' not in resolve_copilot['env']
+setup_copilot = copilot_steps['Install pinned Copilot CLI']
+assert setup_copilot['id'] == 'copilot_setup'
+assert setup_copilot['continue-on-error'] is True
+assert setup_copilot['run'].find('@github/copilot@1.0.90') >= 0
 copilot = copilot_steps['Generate Copilot release notes']
 assert copilot['uses'] == 'github/copilot-release-notes@29ba181a86b88f3acee62a03369033edfa982ab9'
 assert copilot['continue-on-error'] is True
 assert copilot['with']['pr-strategy'] == 'github-api'
 assert copilot['env']['GITHUB_TOKEN'] == '${{ github.token }}'
 assert copilot['env']['COPILOT_GITHUB_TOKEN'] == '${{ secrets.COPILOT_GITHUB_TOKEN }}'
-assert copilot_steps['Publish advisory Copilot summary']['if'] == "${{ steps.copilot_notes.outcome == 'success' }}"
+assert "steps.copilot_setup.outcome == 'success'" in copilot['if']
+assert "steps.copilot_notes.outputs.release-notes != ''" in copilot_steps['Publish advisory Copilot summary']['if']
 
 wiki_sync = workflows['wiki-sync.yml']
 assert wiki_sync['name'] == 'Sync repository Wiki'
