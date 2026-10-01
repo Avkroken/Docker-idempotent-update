@@ -113,7 +113,7 @@ Före versionerad release ska minst:
 
 vara verifierade.
 
-Repositoryts aktiva releaseautomation ligger i `.github/workflows/release.yml` och använder repositoryts `GITHUB_TOKEN`; ingen separat PAT eller bredare App-writebehörighet behövs. Releasejobbet serialiseras med GitHub Actions native `concurrency` i stället för ett eget API-pollande release-lås.
+Repositoryts aktiva canonical releaseautomation ligger i `.github/workflows/release.yml` och använder repositoryts `GITHUB_TOKEN`; ingen separat PAT eller bredare App-writebehörighet behövs för tagg/GitHub Release. Den valfria rådgivande Copilot-sammanfattningen använder separat read-only `COPILOT_GITHUB_TOKEN` och ändrar inte release-body:n. Releasejobbet serialiseras med GitHub Actions native `concurrency` i stället för ett eget API-pollande release-lås.
 
 ## Incidenter
 
