@@ -87,7 +87,7 @@ Manuell `workflow_dispatch` kan skapa `vMAJOR.MINOR.PATCH-rc.N`. En RC publicera
 
 ## Credentials och permissions
 
-Ingen PAT behövs. Releaseflödet använder endast repositoryts `GITHUB_TOKEN` med least privilege:
+Canonical tagg- och GitHub Release-publication behöver ingen PAT och använder repositoryts `GITHUB_TOKEN` med least privilege:
 
 - read för checks/status/history;
 - `contents: write` för GitHub Release/tagg;
