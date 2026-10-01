@@ -97,6 +97,12 @@ assert set(release['jobs']) == {'validate', 'copilot-release-notes', 'release', 
 assert release['jobs']['validate']['name'] == 'Validate semantic release'
 release_job = release['jobs']['release']
 assert release_job['name'] == 'Semantic release'
+assert release_job['outputs'] == {
+    'release': '${{ steps.release.outputs.release }}',
+    'tag': '${{ steps.release.outputs.tag }}',
+    'base_tag': '${{ steps.release.outputs.base_tag }}',
+    'target_sha': '${{ steps.release.outputs.target_sha }}',
+}
 assert release_job['permissions'] == {
     'actions': 'read',
     'checks': 'read',
