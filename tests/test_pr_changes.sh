@@ -93,7 +93,7 @@ release = workflows['release.yml']
 assert release['name'] == 'Release'
 assert release['permissions'] == {'contents': 'read'}
 assert set(release[True]) == {'pull_request', 'push', 'workflow_dispatch'}
-assert set(release['jobs']) == {'validate', 'release', 'publish-container'}
+assert set(release['jobs']) == {'validate', 'copilot-release-notes', 'release', 'publish-container'}
 assert release['jobs']['validate']['name'] == 'Validate semantic release'
 release_job = release['jobs']['release']
 assert release_job['name'] == 'Semantic release'
@@ -111,12 +111,18 @@ assert release_job['concurrency'] == {
 assert release_job['steps'][0]['name'] == 'Checkout repository'
 assert all(step.get('name') != 'Wait for release turn' for step in release_job['steps'])
 release_steps = {step.get('name'): step for step in release_job['steps']}
-copilot = release_steps['Generate Copilot release notes']
+assert 'Generate Copilot release notes' not in release_steps
+copilot_job = release['jobs']['copilot-release-notes']
+assert copilot_job['permissions'] == {'contents': 'read', 'pull-requests': 'read'}
+copilot_steps = {step.get('name'): step for step in copilot_job['steps']}
+assert copilot_steps['Install pinned Copilot CLI']['run'].find('@github/copilot@1.0.90') >= 0
+copilot = copilot_steps['Generate Copilot release notes']
 assert copilot['uses'] == 'github/copilot-release-notes@29ba181a86b88f3acee62a03369033edfa982ab9'
 assert copilot['continue-on-error'] is True
+assert copilot['with']['pr-strategy'] == 'github-api'
 assert copilot['env']['GITHUB_TOKEN'] == '${{ github.token }}'
 assert copilot['env']['COPILOT_GITHUB_TOKEN'] == '${{ secrets.COPILOT_GITHUB_TOKEN }}'
-assert release_steps['Append Copilot summary']['if'] == "${{ steps.copilot_notes.outcome == 'success' }}"
+assert copilot_steps['Publish advisory Copilot summary']['if'] == "${{ steps.copilot_notes.outcome == 'success' }}"
 
 wiki_sync = workflows['wiki-sync.yml']
 assert wiki_sync['name'] == 'Sync repository Wiki'
