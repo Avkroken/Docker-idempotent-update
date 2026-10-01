@@ -101,6 +101,7 @@ assert release_job['permissions'] == {
     'actions': 'read',
     'checks': 'read',
     'contents': 'write',
+    'pull-requests': 'read',
     'statuses': 'read',
 }
 assert release_job['concurrency'] == {
@@ -109,6 +110,13 @@ assert release_job['concurrency'] == {
 }
 assert release_job['steps'][0]['name'] == 'Checkout repository'
 assert all(step.get('name') != 'Wait for release turn' for step in release_job['steps'])
+release_steps = {step.get('name'): step for step in release_job['steps']}
+copilot = release_steps['Generate Copilot release notes']
+assert copilot['uses'] == 'github/copilot-release-notes@29ba181a86b88f3acee62a03369033edfa982ab9'
+assert copilot['continue-on-error'] is True
+assert copilot['env']['GITHUB_TOKEN'] == '${{ github.token }}'
+assert copilot['env']['COPILOT_GITHUB_TOKEN'] == '${{ secrets.COPILOT_GITHUB_TOKEN }}'
+assert release_steps['Append Copilot summary']['if'] == "${{ steps.copilot_notes.outcome == 'success' }}"
 
 wiki_sync = workflows['wiki-sync.yml']
 assert wiki_sync['name'] == 'Sync repository Wiki'
