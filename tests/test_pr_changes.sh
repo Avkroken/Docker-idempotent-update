@@ -30,6 +30,8 @@ assert set(ci['jobs']) == {'dependency-review', 'python', 'docker'}
 assert ci['jobs']['dependency-review']['name'] == 'Dependency review'
 assert ci['jobs']['python']['name'] == 'Python'
 assert ci['jobs']['docker']['name'] == 'Docker'
+python_steps = ci['jobs']['python']['steps']
+assert any('python -m pytest -q' in step.get('run', '') for step in python_steps)
 
 codeql = workflows['codeql.yml']
 assert codeql['name'] == 'CodeQL'
