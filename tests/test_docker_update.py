@@ -142,3 +142,61 @@ def test_bind_from_volume_flag_is_not_duplicated():
     cmd = docker_update._append_runtime_options(["docker", "run"], info)
     assert cmd.count("-v") == 1
     assert "--mount" not in cmd
+
+
+def test_tmpfs_host_config_options_are_not_duplicated():
+    info = {
+        "HostConfig": {
+            "Binds": [],
+            "Tmpfs": {"/run": "rw,noexec,nosuid,size=64m"},
+        },
+        "Mounts": [
+            {"Type": "tmpfs", "Destination": "/run", "RW": True},
+        ],
+    }
+
+    cmd = docker_update._append_runtime_options(["docker", "run"], info)
+
+    assert cmd.count("--tmpfs") == 1
+    assert cmd[cmd.index("--tmpfs") + 1] == "/run:rw,noexec,nosuid,size=64m"
+
+
+def test_inspect_only_tmpfs_mount_is_preserved():
+    info = {
+        "HostConfig": {"Binds": [], "Tmpfs": {}},
+        "Mounts": [
+            {"Type": "tmpfs", "Destination": "/scratch", "RW": True},
+        ],
+    }
+
+    cmd = docker_update._append_runtime_options(["docker", "run"], info)
+
+    assert cmd.count("--tmpfs") == 1
+    assert cmd[cmd.index("--tmpfs") + 1] == "/scratch"
+
+
+def test_process_config_preserves_docker_cli_order_for_string_values():
+    info = {
+        "Config": {
+            "Entrypoint": "/entrypoint",
+            "Cmd": "serve",
+        },
+    }
+
+    cmd = docker_update._append_process_config(
+        ["docker", "run", "--detach", "--name", "demo"],
+        info,
+        "example:latest",
+    )
+
+    assert cmd == [
+        "docker",
+        "run",
+        "--detach",
+        "--name",
+        "demo",
+        "--entrypoint",
+        "/entrypoint",
+        "example:latest",
+        "serve",
+    ]

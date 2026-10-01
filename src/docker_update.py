@@ -192,6 +192,7 @@ def _append_runtime_options(cmd: list[str], info: dict) -> list[str]:
         cmd += ["-e", env_var]
 
     bind_targets: set[str] = set()
+    configured_tmpfs = set((hc.get("Tmpfs") or {}).keys())
     for bind in hc.get("Binds") or []:
         cmd += ["-v", bind]
         parts = bind.split(":")
@@ -226,7 +227,7 @@ def _append_runtime_options(cmd: list[str], info: dict) -> list[str]:
             if not mount.get("RW", True):
                 spec += ":ro"
             cmd += ["-v", spec]
-        elif mount_type == "tmpfs":
+        elif mount_type == "tmpfs" and target not in configured_tmpfs:
             cmd += ["--tmpfs", target]
 
     for cport, bindings in (hc.get("PortBindings") or {}).items():
@@ -298,8 +299,8 @@ def _append_runtime_options(cmd: list[str], info: dict) -> list[str]:
     return cmd
 
 
-def _append_process_config(cmd: list[str], info: dict) -> list[str]:
-    """Append the inspected entrypoint and command after the image name."""
+def _append_process_config(cmd: list[str], info: dict, image: str) -> list[str]:
+    """Append the inspected entrypoint, image and command in Docker CLI order."""
     container_cfg = info.get("Config") or {}
     entrypoint = container_cfg.get("Entrypoint") or []
     original_cmd = container_cfg.get("Cmd") or []
@@ -310,7 +311,9 @@ def _append_process_config(cmd: list[str], info: dict) -> list[str]:
         original_cmd = [original_cmd]
 
     if entrypoint:
-        cmd[1:1] = ["--entrypoint", str(entrypoint[0])]
+        cmd += ["--entrypoint", str(entrypoint[0])]
+    cmd.append(image)
+    if entrypoint:
         cmd.extend(str(item) for item in entrypoint[1:])
     cmd.extend(str(item) for item in original_cmd)
     return cmd
@@ -346,21 +349,7 @@ def _recreate_container(cid: str, image: str, name: str) -> bool:
     backup_name = f"{name}.idempotent-backup-{cid[:12]}"
     cmd = ["docker", "run", "--detach", "--name", name]
     _append_runtime_options(cmd, info)
-
-    container_cfg = info.get("Config") or {}
-    entrypoint = container_cfg.get("Entrypoint") or []
-    if isinstance(entrypoint, str):
-        entrypoint = [entrypoint]
-    if entrypoint:
-        cmd += ["--entrypoint", str(entrypoint[0])]
-
-    cmd.append(image)
-    if entrypoint:
-        cmd.extend(str(item) for item in entrypoint[1:])
-    original_cmd = container_cfg.get("Cmd") or []
-    if isinstance(original_cmd, str):
-        original_cmd = [original_cmd]
-    cmd.extend(str(item) for item in original_cmd)
+    _append_process_config(cmd, info, image)
 
     stopped = subprocess.run(
         ["docker", "stop", cid], capture_output=True, text=True, check=False

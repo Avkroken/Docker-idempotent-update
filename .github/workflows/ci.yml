@@ -42,6 +42,7 @@ jobs:
           pip install flake8 pytest PyYAML
           pip install -r plex-clear-watchlist/requirements.txt
           flake8 src plex-clear-watchlist --count --select=E9,F63,F7,F82 --show-source --statistics
+          python -m pytest -q
           bash tests/test_pr_changes.sh
 
   docker:
