@@ -81,6 +81,14 @@ När schedulerlogik ändras ska man skilja på:
 
 Statusfilen ligger i `/config/status.json`. Rapportering får inte maskera det ursprungliga update-/backupfelet.
 
+## Plex watchlist-sidecar
+
+`plex-clear-watchlist` är en separat container med destruktiv delete-funktion och ska därför faila stängt vid osäker liststate.
+
+Innan någon radering får börja ska hela watchlisten vara verifierat hämtad. Om Plex anger `totalSize` måste antalet insamlade poster nå exakt den summan; tom sida före totalen, ogiltig metadata eller motsägande totalsumma är fel och ska avbryta. Om `totalSize` saknas fortsätter pagineringen tills API:t uttryckligen ger en tom sida. En post utan användbar `ratingKey` ska markeras som misslyckad/skippad och får aldrig orsaka DELETE mot watchlist-rooten.
+
+Ändringar i sidecaren ska täckas av pytest med syntetiska HTTP-svar. Tester får inte kräva en riktig Plex-token eller anropa Plex.
+
 ## Release och containerpublicering
 
 Release- och versionskontraktet finns i [release-standard.md](release-standard.md).
