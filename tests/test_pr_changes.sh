@@ -48,8 +48,6 @@ agent_automerge = workflows['agent-automerge.yml']
 assert agent_automerge['name'] == 'Agent auto-merge'
 assert set(agent_automerge[True]) == {
     'pull_request',
-    'pull_request_review',
-    'pull_request_review_comment',
     'check_run',
     'push',
     'schedule',
