@@ -12,6 +12,7 @@ workflow_dir = Path('.github/workflows')
 workflows = {path.name: yaml.safe_load(path.read_text()) for path in workflow_dir.glob('*.yml')}
 assert set(workflows) == {
     'agent-automerge.yml',
+    'agent-lifecycle-signal.yml',
     'auto-assign.yml',
     'ci.yml',
     'codeql.yml',
@@ -48,13 +49,19 @@ agent_automerge = workflows['agent-automerge.yml']
 assert agent_automerge['name'] == 'Agent auto-merge'
 assert set(agent_automerge[True]) == {
     'pull_request',
-    'pull_request_review',
-    'pull_request_review_comment',
+    'workflow_run',
     'check_run',
     'push',
     'schedule',
     'workflow_dispatch',
 }
+assert agent_automerge[True]['workflow_run'] == {
+    'workflows': ['Agent lifecycle signal'],
+    'types': ['completed'],
+}
+signal = workflows['agent-lifecycle-signal.yml']
+assert signal['permissions'] == {}
+assert set(signal[True]) == {'pull_request_review', 'pull_request_review_comment', 'workflow_dispatch'}
 assert agent_automerge[True]['check_run']['types'] == ['completed']
 assert agent_automerge['permissions'] == {}
 agent_job = agent_automerge['jobs']['agent-auto-merge']
