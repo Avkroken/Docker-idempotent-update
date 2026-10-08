@@ -22,8 +22,16 @@ assert set(workflows) == {
     'labeler.yml',
     'pr-title.yml',
     'release.yml',
+    'security-alert-issues.yml',
     'wiki-sync.yml',
 }
+
+security = workflows['security-alert-issues.yml']
+assert security['permissions'] == {}
+assert 'pull_request' in security[True]
+assert 'schedule' in security[True]
+assert security['jobs']['reconcile']['permissions']['issues'] == 'write'
+assert security['jobs']['tests']['permissions'] == {'contents': 'read'}
 
 ci = workflows['ci.yml']
 assert ci['name'] == 'CI'
