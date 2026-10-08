@@ -11,6 +11,7 @@ import yaml
 workflow_dir = Path('.github/workflows')
 workflows = {path.name: yaml.safe_load(path.read_text()) for path in workflow_dir.glob('*.yml')}
 assert set(workflows) == {
+    'agent-automerge-policy.yml',
     'agent-automerge.yml',
     'agent-lifecycle-signal.yml',
     'auto-assign.yml',
