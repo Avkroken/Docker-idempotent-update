@@ -1,6 +1,8 @@
 name: Release
 
 on:
+  repository_dispatch:
+    types: [agent-pr-merged]
   pull_request:
     branches: [main]
     paths:
