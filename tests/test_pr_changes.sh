@@ -13,14 +13,18 @@ workflows = {path.name: yaml.safe_load(path.read_text()) for path in workflow_di
 assert set(workflows) == {
     'agent-automerge.yml',
     'agent-lifecycle-signal.yml',
+    'automation-post-merge.yml',
     'auto-assign.yml',
+    'bot-pr-lifecycle.yml',
     'ci.yml',
     'codeql.yml',
     'dependabot-automerge.yml',
     'docker-publish.yml',
+    'issue-copilot.yml',
     'labeler.yml',
     'pr-title.yml',
     'release.yml',
+    'security-alert-issues.yml',
     'wiki-sync.yml',
 }
 
@@ -99,7 +103,8 @@ assert not any('secrets.' in str(step) for step in title_job['steps'])
 release = workflows['release.yml']
 assert release['name'] == 'Release'
 assert release['permissions'] == {'contents': 'read'}
-assert set(release[True]) == {'pull_request', 'push', 'workflow_dispatch'}
+assert set(release[True]) == {'repository_dispatch', 'pull_request', 'push', 'workflow_dispatch'}
+assert release[True]['repository_dispatch'] == {'types': ['agent-pr-merged']}
 assert set(release['jobs']) == {'validate', 'copilot-release-notes', 'release', 'publish-container'}
 assert release['jobs']['validate']['name'] == 'Validate semantic release'
 release_job = release['jobs']['release']
