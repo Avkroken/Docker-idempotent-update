@@ -11,6 +11,7 @@ import yaml
 workflow_dir = Path('.github/workflows')
 workflows = {path.name: yaml.safe_load(path.read_text()) for path in workflow_dir.glob('*.yml')}
 assert set(workflows) == {
+    'agent-automerge-policy.yml',
     'agent-automerge.yml',
     'agent-lifecycle-signal.yml',
     'auto-assign.yml',
@@ -70,7 +71,7 @@ assert agent_job['permissions'] == {
     'contents': 'write',
     'pull-requests': 'write',
 }
-assert agent_job['uses'] == 'Avkroken/.github/.github/workflows/agent-automerge-policy.yml@e853bde6e0e8c88e8d8df2709cf3e2d61ddc396c'
+assert agent_job['uses'] == './.github/workflows/agent-automerge-policy.yml'
 
 auto_assign = workflows['auto-assign.yml']
 assert auto_assign['name'] == 'Auto assign issues and pull requests'
