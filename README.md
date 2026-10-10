@@ -26,3 +26,7 @@ README är en ingång; detaljerad teknisk information ligger under `docs/`.
 - `DRY_RUN=true` får inte mutera containers.
 - Compose-läget och socket-läget har olika updatealgoritmer.
 - socket-recreation måste bevara relevant inspect-derived runtimekonfiguration och återställa originalet om recreation misslyckas.
+
+## Portable container image reference
+
+The publishing workflow derives the GHCR namespace from the current GitHub repository owner at runtime. For standalone Docker Compose use, set `PLEX_CLEAR_WATCHLIST_IMAGE` to the image actually published for your own GitHub account or organization, for example `ghcr.io/<owner>/plex-clear-watchlist:latest` (substitute `<owner>`). There is intentionally no fallback to a previous owner or a different registry package. Forks must configure their own publishing permissions; this source change does not grant access to another owner's GHCR packages.
