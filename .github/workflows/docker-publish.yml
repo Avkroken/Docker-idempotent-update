@@ -19,7 +19,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: avkroken/plex-clear-watchlist
 
 jobs:
   publish:
@@ -47,6 +46,16 @@ jobs:
             echo "::error::Invalid release image tag: ${RELEASE_TAG}"
             exit 1
           }
+      - name: Resolve image namespace from repository owner
+        shell: bash
+        run: |
+          set -euo pipefail
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          [[ "${owner}" =~ ^[a-z0-9][a-z0-9-]*$ ]] || {
+            echo "::error::Invalid container registry owner"
+            exit 1
+          }
+          echo "IMAGE_NAME=${owner}/plex-clear-watchlist" >> "${GITHUB_ENV}"
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - name: Log into registry ${{ env.REGISTRY }}

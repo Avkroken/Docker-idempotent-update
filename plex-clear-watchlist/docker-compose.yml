@@ -1,6 +1,6 @@
 services:
   plex-clear-watchlist:
-    image: ghcr.io/avkroken/plex-clear-watchlist:latest
+    image: ${PLEX_CLEAR_WATCHLIST_IMAGE:?Set PLEX_CLEAR_WATCHLIST_IMAGE to your published GHCR image}
     build: .
     environment:
       - PLEX_TOKEN=${PLEX_TOKEN}
